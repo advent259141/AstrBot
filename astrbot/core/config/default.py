@@ -6,7 +6,7 @@ import os
 
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
-VERSION = "3.5.22"
+VERSION = "3.5.25"
 DB_PATH = os.path.join(get_astrbot_data_path(), "data_v3.db")
 
 # 默认配置
@@ -65,6 +65,7 @@ DEFAULT_CONFIG = {
         "show_tool_use_status": False,
         "streaming_segmented": False,
         "separate_provider": True,
+        "max_agent_step": 30
     },
     "provider_stt_settings": {
         "enable": False,
@@ -156,15 +157,6 @@ CONFIG_METADATA_2 = {
                         "ws_reverse_host": "0.0.0.0",
                         "ws_reverse_port": 6199,
                         "ws_reverse_token": "",
-                    },
-                    "微信个人号(Gewechat)": {
-                        "id": "gwchat",
-                        "type": "gewechat",
-                        "enable": False,
-                        "base_url": "http://localhost:2531",
-                        "nickname": "soulter",
-                        "host": "这里填写你的局域网IP或者公网服务器IP",
-                        "port": 11451,
                     },
                     "微信个人号(WeChatPadPro)": {
                         "id": "wechatpadpro",
@@ -608,7 +600,9 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "gpt-4o-mini",
+                            "temperature": 0.4
                         },
+                        "hint": "也兼容所有与OpenAI API兼容的服务。"
                     },
                     "Azure OpenAI": {
                         "id": "azure",
@@ -622,6 +616,7 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "gpt-4o-mini",
+                            "temperature": 0.4
                         },
                     },
                     "xAI": {
@@ -635,9 +630,11 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "grok-2-latest",
+                            "temperature": 0.4
                         },
                     },
                     "Anthropic": {
+                        "hint": "注意Claude系列模型的温度调节范围为0到1.0，超出可能导致报错",
                         "id": "claude",
                         "provider": "anthropic",
                         "type": "anthropic_chat_completion",
@@ -649,9 +646,11 @@ CONFIG_METADATA_2 = {
                         "model_config": {
                             "model": "claude-3-5-sonnet-latest",
                             "max_tokens": 4096,
+                            "temperature": 0.2
                         },
                     },
                     "Ollama": {
+                        "hint":"启用前请确保已正确安装并运行 Ollama 服务端，Ollama默认不带鉴权，无需修改key",
                         "id": "ollama_default",
                         "provider": "ollama",
                         "type": "openai_chat_completion",
@@ -661,6 +660,7 @@ CONFIG_METADATA_2 = {
                         "api_base": "http://localhost:11434/v1",
                         "model_config": {
                             "model": "llama3.1-8b",
+                            "temperature": 0.4
                         },
                     },
                     "LM Studio": {
@@ -686,6 +686,7 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "gemini-1.5-flash",
+                            "temperature": 0.4
                         },
                     },
                     "Gemini": {
@@ -699,6 +700,7 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "gemini-2.0-flash-exp",
+                            "temperature": 0.4
                         },
                         "gm_resp_image_modal": False,
                         "gm_native_search": False,
@@ -725,6 +727,7 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "deepseek-chat",
+                            "temperature": 0.4
                         },
                     },
                     "302.AI": {
@@ -738,6 +741,7 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "gpt-4.1-mini",
+                            "temperature": 0.4
                         },
                     },
                     "硅基流动": {
@@ -751,6 +755,7 @@ CONFIG_METADATA_2 = {
                         "api_base": "https://api.siliconflow.cn/v1",
                         "model_config": {
                             "model": "deepseek-ai/DeepSeek-V3",
+                            "temperature": 0.4
                         },
                     },
                     "PPIO派欧云": {
@@ -764,6 +769,20 @@ CONFIG_METADATA_2 = {
                         "timeout": 120,
                         "model_config": {
                             "model": "deepseek/deepseek-r1",
+                            "temperature": 0.4
+                        },
+                    },
+                    "优云智算": {
+                        "id": "compshare",
+                        "provider": "compshare",
+                        "type": "openai_chat_completion",
+                        "provider_type": "chat_completion",
+                        "enable": True,
+                        "key": [],
+                        "api_base": "https://api.modelverse.cn/v1",
+                        "timeout": 120,
+                        "model_config": {
+                            "model": "moonshotai/Kimi-K2-Instruct",
                         },
                     },
                     "Kimi": {
@@ -777,6 +796,7 @@ CONFIG_METADATA_2 = {
                         "api_base": "https://api.moonshot.cn/v1",
                         "model_config": {
                             "model": "moonshot-v1-8k",
+                            "temperature": 0.4
                         },
                     },
                     "智谱 AI": {
@@ -805,6 +825,7 @@ CONFIG_METADATA_2 = {
                         "dify_query_input_key": "astrbot_text_query",
                         "variables": {},
                         "timeout": 60,
+                        "hint": "请确保你在 AstrBot 里设置的 APP 类型和 Dify 里面创建的应用的类型一致！"
                     },
                     "阿里云百炼应用": {
                         "id": "dashscope",
@@ -822,6 +843,20 @@ CONFIG_METADATA_2 = {
                         },
                         "variables": {},
                         "timeout": 60,
+                    },
+                    "ModelScope": {
+                        "id": "modelscope",
+                        "provider": "modelscope",
+                        "type": "openai_chat_completion",
+                        "provider_type": "chat_completion",
+                        "enable": True,
+                        "key": [],
+                        "timeout": 120,
+                        "api_base": "https://api-inference.modelscope.cn/v1",
+                        "model_config": {
+                            "model": "Qwen/Qwen3-32B",
+                            "temperature": 0.4
+                        },
                     },
                     "FastGPT": {
                         "id": "fastgpt",
@@ -844,7 +879,7 @@ CONFIG_METADATA_2 = {
                         "model": "whisper-1",
                     },
                     "Whisper(本地加载)": {
-                        "whisper_hint": "(不用修改我)",
+                        "hint": "启用前请 pip 安装 openai-whisper 库（N卡用户大约下载 2GB，主要是 torch 和 cuda，CPU 用户大约下载 1 GB），并且安装 ffmpeg。否则将无法正常转文字。",
                         "provider": "openai",
                         "type": "openai_whisper_selfhost",
                         "provider_type": "speech_to_text",
@@ -853,7 +888,7 @@ CONFIG_METADATA_2 = {
                         "model": "tiny",
                     },
                     "SenseVoice(本地加载)": {
-                        "sensevoice_hint": "(不用修改我)",
+                        "hint": "启用前请 pip 安装 funasr、funasr_onnx、torchaudio、torch、modelscope、jieba 库（默认使用CPU，大约下载 1 GB），并且安装 ffmpeg。否则将无法正常转文字。",
                         "type": "sensevoice_stt_selfhost",
                         "provider": "sensevoice",
                         "provider_type": "speech_to_text",
@@ -875,7 +910,7 @@ CONFIG_METADATA_2 = {
                         "timeout": "20",
                     },
                     "Edge TTS": {
-                        "edgetts_hint": "提示：使用这个服务前需要安装有 ffmpeg，并且可以直接在终端调用 ffmpeg 指令。",
+                        "hint": "提示：使用这个服务前需要安装有 ffmpeg，并且可以直接在终端调用 ffmpeg 指令。",
                         "id": "edge_tts",
                         "provider": "microsoft",
                         "type": "edge_tts",
@@ -1021,7 +1056,7 @@ CONFIG_METADATA_2 = {
                         "embedding_api_key": "",
                         "embedding_api_base": "",
                         "embedding_model": "",
-                        "embedding_dimensions": 1536,
+                        "embedding_dimensions": 1024,
                         "timeout": 20,
                     },
                     "Gemini Embedding": {
@@ -1694,6 +1729,10 @@ CONFIG_METADATA_2 = {
                         "description": "不支持流式回复的平台分段输出",
                         "type": "bool",
                         "hint": "启用后，若平台不支持流式回复，会分段输出。目前仅支持 aiocqhttp 两个平台，不支持或无需使用流式分段输出的平台会静默忽略此选项",
+                    },
+                    "max_agent_step": {
+                        "description": "工具调用轮数上限",
+                        "type": "int",
                     },
                 },
             },

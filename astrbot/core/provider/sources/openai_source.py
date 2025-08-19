@@ -99,6 +99,11 @@ class ProviderOpenAIOfficial(Provider):
         for key in to_del:
             del payloads[key]
 
+        # 针对 qwen3 模型的特殊处理：非流式调用必须设置 enable_thinking=false
+        model = payloads.get("model", "")
+        if "qwen3" in model.lower():
+            extra_body["enable_thinking"] = False
+
         completion = await self.client.chat.completions.create(
             **payloads, stream=False, extra_body=extra_body
         )
@@ -176,7 +181,7 @@ class ProviderOpenAIOfficial(Provider):
             raise Exception("API 返回的 completion 为空。")
         choice = completion.choices[0]
 
-        if choice.message.content:
+        if choice.message.content is not None:
             # text completion
             completion_text = str(choice.message.content).strip()
             llm_response.result_chain = MessageChain().message(completion_text)
@@ -210,7 +215,7 @@ class ProviderOpenAIOfficial(Provider):
                 "API 返回的 completion 由于内容安全过滤被拒绝(非 AstrBot)。"
             )
 
-        if not llm_response.completion_text and not llm_response.tools_call_args:
+        if llm_response.completion_text is None and not llm_response.tools_call_args:
             logger.error(f"API 返回的 completion 无法解析：{completion}。")
             raise Exception(f"API 返回的 completion 无法解析：{completion}。")
 
