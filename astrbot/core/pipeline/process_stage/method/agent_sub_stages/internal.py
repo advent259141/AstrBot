@@ -194,13 +194,16 @@ class InternalAgentSubStage(Stage):
                 logger.debug(
                     f"用户设置提供商 {provider} 不支持图像，将图像替换为占位符。"
                 )
-                # 为每个图片添加占位符到 prompt
-                image_count = len(req.image_urls)
-                placeholder = " ".join(["[图片]"] * image_count)
-                if req.prompt:
-                    req.prompt = f"{placeholder} {req.prompt}"
-                else:
-                    req.prompt = placeholder
+                # 检查 prompt 中是否已经包含 [图片] 占位符
+                # 如果已经有了，就不再重复添加（某些 Provider 会自动添加）
+                if not req.prompt or "[图片]" not in req.prompt:
+                    # 为每个图片添加占位符到 prompt
+                    image_count = len(req.image_urls)
+                    placeholder = " ".join(["[图片]"] * image_count)
+                    if req.prompt:
+                        req.prompt = f"{placeholder} {req.prompt}"
+                    else:
+                        req.prompt = placeholder
                 req.image_urls = []
         if req.func_tool:
             provider_cfg = provider.provider_config.get("modalities", ["tool_use"])
