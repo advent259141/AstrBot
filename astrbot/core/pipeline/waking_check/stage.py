@@ -137,11 +137,14 @@ class WakingCheckStage(Stage):
                     event.is_at_or_wake_command = True
                     break
             # 检查是否是私聊
+            # 修复：私聊中即使没有文本内容（例如仅发送图片），也应该唤醒机器人
             if event.is_private_chat() and not self.friend_message_needs_wake_prefix:
-                is_wake = True
-                event.is_wake = True
-                event.is_at_or_wake_command = True
-                wake_prefix = ""
+                # 检查是否有任何消息内容（文本或其他媒体）
+                if event.message_str or len(messages) > 0:
+                    is_wake = True
+                    event.is_wake = True
+                    event.is_at_or_wake_command = True
+                    wake_prefix = ""
 
         # 检查插件的 handler filter
         activated_handlers = []
