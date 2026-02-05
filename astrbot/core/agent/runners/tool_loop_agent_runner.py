@@ -14,8 +14,9 @@ from mcp.types import (
 )
 
 from astrbot import logger
-from astrbot.core.agent.message import TextPart, ThinkPart
+from astrbot.core.agent.message import ImageURLPart, TextPart, ThinkPart
 from astrbot.core.agent.tool import ToolSet
+from astrbot.core.agent.tool_image_cache import tool_image_cache
 from astrbot.core.message.components import Json
 from astrbot.core.message.message_event_result import (
     MessageChain,
@@ -282,9 +283,13 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 llm_resp, _ = await self._resolve_tool_exec(llm_resp)
 
             tool_call_result_blocks = []
+            cached_images = []  # Collect cached images for LLM visibility
             async for result in self._handle_function_tools(self.req, llm_resp):
                 if isinstance(result, list):
                     tool_call_result_blocks = result
+                elif isinstance(result, tuple) and result[0] == "cached_image":
+                    # Collect cached image info
+                    cached_images.append(result[1])
                 elif isinstance(result, MessageChain):
                     if result.type is None:
                         # should not happen
@@ -321,6 +326,41 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                 tool_calls_result.to_openai_messages_model()
             )
 
+            # If there are cached images and the model supports image input,
+            # append a user message with images so LLM can see them
+            if cached_images:
+                modalities = self.provider.provider_config.get("modalities", [])
+                supports_image = "image" in modalities
+                if supports_image:
+                    # Build user message with images for LLM to review
+                    image_parts = []
+                    for cached_img in cached_images:
+                        img_data = tool_image_cache.get_image_base64(
+                            cached_img.image_ref
+                        )
+                        if img_data:
+                            base64_data, mime_type = img_data
+                            image_parts.append(
+                                TextPart(
+                                    text=f"[Image from tool '{cached_img.tool_name}', ref='{cached_img.image_ref}']"
+                                )
+                            )
+                            image_parts.append(
+                                ImageURLPart(
+                                    image_url=ImageURLPart.ImageURL(
+                                        url=f"data:{mime_type};base64,{base64_data}",
+                                        id=cached_img.image_ref,
+                                    )
+                                )
+                            )
+                    if image_parts:
+                        self.run_context.messages.append(
+                            Message(role="user", content=image_parts)
+                        )
+                        logger.debug(
+                            f"Appended {len(cached_images)} cached image(s) to context for LLM review"
+                        )
+
             self.req.append_tool_calls_result(tool_calls_result)
 
     async def step_until_done(
@@ -356,7 +396,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self,
         req: ProviderRequest,
         llm_response: LLMResponse,
-    ) -> T.AsyncGenerator[MessageChain | list[ToolCallMessageSegment], None]:
+    ) -> T.AsyncGenerator[
+        MessageChain | list[ToolCallMessageSegment] | tuple[str, T.Any], None
+    ]:
         """处理函数工具调用。"""
         tool_call_result_blocks: list[ToolCallMessageSegment] = []
         logger.info(f"Agent 使用工具: {llm_response.tools_call_name}")
@@ -464,16 +506,26 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                 ),
                             )
                         elif isinstance(res.content[0], ImageContent):
+                            # Cache the image instead of sending directly
+                            cached_img = tool_image_cache.save_image(
+                                base64_data=res.content[0].data,
+                                tool_call_id=func_tool_id,
+                                tool_name=func_tool_name,
+                                index=0,
+                                mime_type=res.content[0].mimeType or "image/png",
+                            )
                             tool_call_result_blocks.append(
                                 ToolCallMessageSegment(
                                     role="tool",
                                     tool_call_id=func_tool_id,
-                                    content="The tool has successfully returned an image and sent directly to the user. You can describe it in your next response.",
+                                    content=(
+                                        f"Image returned and cached. image_ref='{cached_img.image_ref}'. "
+                                        f"Review the image below. Use send_tool_image(image_ref='{cached_img.image_ref}') to send it to the user if satisfied."
+                                    ),
                                 ),
                             )
-                            yield MessageChain(type="tool_direct_result").base64_image(
-                                res.content[0].data,
-                            )
+                            # Yield image info for LLM visibility (will be handled in step())
+                            yield ("cached_image", cached_img)
                         elif isinstance(res.content[0], EmbeddedResource):
                             resource = res.content[0].resource
                             if isinstance(resource, TextResourceContents):
@@ -489,16 +541,26 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                 and resource.mimeType
                                 and resource.mimeType.startswith("image/")
                             ):
+                                # Cache the image instead of sending directly
+                                cached_img = tool_image_cache.save_image(
+                                    base64_data=resource.blob,
+                                    tool_call_id=func_tool_id,
+                                    tool_name=func_tool_name,
+                                    index=0,
+                                    mime_type=resource.mimeType,
+                                )
                                 tool_call_result_blocks.append(
                                     ToolCallMessageSegment(
                                         role="tool",
                                         tool_call_id=func_tool_id,
-                                        content="The tool has successfully returned an image and sent directly to the user. You can describe it in your next response.",
+                                        content=(
+                                            f"Image returned and cached. image_ref='{cached_img.image_ref}'. "
+                                            f"Review the image below. Use send_tool_image(image_ref='{cached_img.image_ref}') to send it to the user if satisfied."
+                                        ),
                                     ),
                                 )
-                                yield MessageChain(
-                                    type="tool_direct_result",
-                                ).base64_image(resource.blob)
+                                # Yield image info for LLM visibility
+                                yield ("cached_image", cached_img)
                             else:
                                 tool_call_result_blocks.append(
                                     ToolCallMessageSegment(
