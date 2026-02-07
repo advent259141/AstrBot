@@ -9,7 +9,6 @@ import astrbot.core.message.components as Comp
 from astrbot.api import logger, sp
 from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import FunctionTool, ToolExecResult
-from astrbot.core.agent.tool_image_cache import tool_image_cache
 from astrbot.core.astr_agent_context import AstrAgentContext
 from astrbot.core.computer.computer_client import get_booter
 from astrbot.core.computer.tools import (
@@ -362,106 +361,6 @@ class SendMessageToUserTool(FunctionTool[AstrAgentContext]):
         return f"Message sent to session {target_session}"
 
 
-@dataclass
-class SendToolImageTool(FunctionTool[AstrAgentContext]):
-    """Tool for sending cached tool images to users.
-
-    This tool allows LLM to decide which images to send after reviewing them.
-    """
-
-    name: str = "send_tool_image"
-    description: str = (
-        "Send one or more cached tool images to the user. "
-        "Use this after reviewing images returned by other tools. "
-        "Only send images that are satisfactory and relevant to the user's request."
-    )
-
-    parameters: dict = Field(
-        default_factory=lambda: {
-            "type": "object",
-            "properties": {
-                "image_refs": {
-                    "type": "array",
-                    "description": (
-                        "List of image reference IDs to send. "
-                        "These are the image_ref values returned by tools that produced images."
-                    ),
-                    "items": {"type": "string"},
-                },
-                "caption": {
-                    "type": "string",
-                    "description": "Optional caption or description to send with the images.",
-                },
-            },
-            "required": ["image_refs"],
-        }
-    )
-
-    async def call(
-        self, context: ContextWrapper[AstrAgentContext], **kwargs
-    ) -> ToolExecResult:
-        image_refs = kwargs.get("image_refs", [])
-        caption = kwargs.get("caption", "")
-
-        if not image_refs:
-            return "error: image_refs parameter is empty."
-
-        if isinstance(image_refs, str):
-            image_refs = [image_refs]
-
-        components: list[Comp.BaseMessageComponent] = []
-        sent_count = 0
-        errors = []
-
-        # Add caption if provided
-        if caption:
-            components.append(Comp.Plain(text=caption))
-
-        for image_ref in image_refs:
-            cached = tool_image_cache.get_image(image_ref)
-            if not cached:
-                errors.append(f"Image '{image_ref}' not found in cache")
-                continue
-
-            if not os.path.exists(cached.file_path):
-                errors.append(f"Image file for '{image_ref}' no longer exists")
-                continue
-
-            try:
-                components.append(Comp.Image.fromFileSystem(path=cached.file_path))
-                sent_count += 1
-            except Exception as e:
-                errors.append(f"Failed to load image '{image_ref}': {e}")
-
-        if not components:
-            return f"error: No valid images to send. Errors: {'; '.join(errors)}"
-
-        # Send the images
-        try:
-            session = context.context.event.unified_msg_origin
-            target_session = (
-                MessageSession.from_str(session)
-                if isinstance(session, str)
-                else session
-            )
-            await context.context.context.send_message(
-                target_session,
-                MessageChain(chain=components),
-            )
-        except Exception as e:
-            return f"error: Failed to send images: {e}"
-
-        # Clean up sent images from cache
-        for image_ref in image_refs:
-            tool_image_cache.delete_image(image_ref)
-
-        result = f"Successfully sent {sent_count} image(s) to user."
-        if errors:
-            result += f" Warnings: {'; '.join(errors)}"
-
-        return result
-
-
 async def retrieve_knowledge_base(
     query: str,
     umo: str,
@@ -540,7 +439,6 @@ async def retrieve_knowledge_base(
 
 KNOWLEDGE_BASE_QUERY_TOOL = KnowledgeBaseQueryTool()
 SEND_MESSAGE_TO_USER_TOOL = SendMessageToUserTool()
-SEND_TOOL_IMAGE_TOOL = SendToolImageTool()
 
 EXECUTE_SHELL_TOOL = ExecuteShellTool()
 LOCAL_EXECUTE_SHELL_TOOL = ExecuteShellTool(is_local=True)

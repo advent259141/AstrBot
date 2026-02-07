@@ -335,21 +335,21 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     # Build user message with images for LLM to review
                     image_parts = []
                     for cached_img in cached_images:
-                        img_data = tool_image_cache.get_image_base64(
-                            cached_img.image_ref
+                        img_data = tool_image_cache.get_image_base64_by_path(
+                            cached_img.file_path, cached_img.mime_type
                         )
                         if img_data:
                             base64_data, mime_type = img_data
                             image_parts.append(
                                 TextPart(
-                                    text=f"[Image from tool '{cached_img.tool_name}', ref='{cached_img.image_ref}']"
+                                    text=f"[Image from tool '{cached_img.tool_name}', path='{cached_img.file_path}']"
                                 )
                             )
                             image_parts.append(
                                 ImageURLPart(
                                     image_url=ImageURLPart.ImageURL(
                                         url=f"data:{mime_type};base64,{base64_data}",
-                                        id=cached_img.image_ref,
+                                        id=cached_img.file_path,
                                     )
                                 )
                             )
@@ -519,8 +519,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                     role="tool",
                                     tool_call_id=func_tool_id,
                                     content=(
-                                        f"Image returned and cached. image_ref='{cached_img.image_ref}'. "
-                                        f"Review the image below. Use send_tool_image(image_ref='{cached_img.image_ref}') to send it to the user if satisfied."
+                                        f"Image returned and cached at path='{cached_img.file_path}'. "
+                                        f"Review the image below. Use send_message_to_user to send it to the user if satisfied, "
+                                        f"with type='image' and path='{cached_img.file_path}'."
                                     ),
                                 ),
                             )
@@ -554,8 +555,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                         role="tool",
                                         tool_call_id=func_tool_id,
                                         content=(
-                                            f"Image returned and cached. image_ref='{cached_img.image_ref}'. "
-                                            f"Review the image below. Use send_tool_image(image_ref='{cached_img.image_ref}') to send it to the user if satisfied."
+                                            f"Image returned and cached at path='{cached_img.file_path}'. "
+                                            f"Review the image below. Use send_message_to_user to send it to the user if satisfied, "
+                                            f"with type='image' and path='{cached_img.file_path}'."
                                         ),
                                     ),
                                 )

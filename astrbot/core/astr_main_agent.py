@@ -33,7 +33,6 @@ from astrbot.core.astr_main_agent_resources import (
     PYTHON_TOOL,
     SANDBOX_MODE_PROMPT,
     SEND_MESSAGE_TO_USER_TOOL,
-    SEND_TOOL_IMAGE_TOOL,
     TOOL_CALL_PROMPT,
     TOOL_CALL_PROMPT_SKILLS_LIKE_MODE,
     retrieve_knowledge_base,
@@ -939,11 +938,6 @@ async def build_main_agent(
         if req.func_tool is None:
             req.func_tool = ToolSet()
         req.func_tool.add_tool(SEND_MESSAGE_TO_USER_TOOL)
-
-    # Add send_tool_image tool when tools are enabled
-    # This allows LLM to decide whether to send images from tool results
-    if req.func_tool is not None:
-        req.func_tool.add_tool(SEND_TOOL_IMAGE_TOOL)
 
     if provider.provider_config.get("max_context_tokens", 0) <= 0:
         model = provider.get_model()
