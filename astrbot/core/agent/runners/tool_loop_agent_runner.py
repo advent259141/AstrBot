@@ -3,6 +3,7 @@ import sys
 import time
 import traceback
 import typing as T
+from dataclasses import dataclass
 
 from mcp.types import (
     BlobResourceContents,
@@ -43,6 +44,28 @@ if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
+
+
+@dataclass(slots=True)
+class _HandleFunctionToolsResult:
+    kind: T.Literal["message_chain", "tool_call_result_blocks", "cached_image"]
+    message_chain: MessageChain | None = None
+    tool_call_result_blocks: list[ToolCallMessageSegment] | None = None
+    cached_image: T.Any = None
+
+    @classmethod
+    def from_message_chain(cls, chain: MessageChain) -> "_HandleFunctionToolsResult":
+        return cls(kind="message_chain", message_chain=chain)
+
+    @classmethod
+    def from_tool_call_result_blocks(
+        cls, blocks: list[ToolCallMessageSegment]
+    ) -> "_HandleFunctionToolsResult":
+        return cls(kind="tool_call_result_blocks", tool_call_result_blocks=blocks)
+
+    @classmethod
+    def from_cached_image(cls, image: T.Any) -> "_HandleFunctionToolsResult":
+        return cls(kind="cached_image", cached_image=image)
 
 
 class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
@@ -289,22 +312,25 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             tool_call_result_blocks = []
             cached_images = []  # Collect cached images for LLM visibility
             async for result in self._handle_function_tools(self.req, llm_resp):
-                if isinstance(result, list):
-                    tool_call_result_blocks = result
-                elif isinstance(result, tuple) and result[0] == "cached_image":
-                    # Collect cached image info
-                    cached_images.append(result[1])
-                elif isinstance(result, MessageChain):
-                    if result.type is None:
+                if result.kind == "tool_call_result_blocks":
+                    if result.tool_call_result_blocks is not None:
+                        tool_call_result_blocks = result.tool_call_result_blocks
+                elif result.kind == "cached_image":
+                    if result.cached_image is not None:
+                        # Collect cached image info
+                        cached_images.append(result.cached_image)
+                elif result.kind == "message_chain":
+                    chain = result.message_chain
+                    if chain is None or chain.type is None:
                         # should not happen
                         continue
-                    if result.type == "tool_direct_result":
+                    if chain.type == "tool_direct_result":
                         ar_type = "tool_call_result"
                     else:
-                        ar_type = result.type
+                        ar_type = chain.type
                     yield AgentResponse(
                         type=ar_type,
-                        data=AgentResponseData(chain=result),
+                        data=AgentResponseData(chain=chain),
                     )
 
             # 将结果添加到上下文中
@@ -402,9 +428,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self,
         req: ProviderRequest,
         llm_response: LLMResponse,
-    ) -> T.AsyncGenerator[
-        MessageChain | list[ToolCallMessageSegment] | tuple[str, T.Any], None
-    ]:
+    ) -> T.AsyncGenerator[_HandleFunctionToolsResult, None]:
         """处理函数工具调用。"""
         tool_call_result_blocks: list[ToolCallMessageSegment] = []
         logger.info(f"Agent 使用工具: {llm_response.tools_call_name}")
@@ -415,18 +439,20 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             llm_response.tools_call_args,
             llm_response.tools_call_ids,
         ):
-            yield MessageChain(
-                type="tool_call",
-                chain=[
-                    Json(
-                        data={
-                            "id": func_tool_id,
-                            "name": func_tool_name,
-                            "args": func_tool_args,
-                            "ts": time.time(),
-                        }
-                    )
-                ],
+            yield _HandleFunctionToolsResult.from_message_chain(
+                MessageChain(
+                    type="tool_call",
+                    chain=[
+                        Json(
+                            data={
+                                "id": func_tool_id,
+                                "name": func_tool_name,
+                                "args": func_tool_args,
+                                "ts": time.time(),
+                            }
+                        )
+                    ],
+                )
             )
             try:
                 if not req.func_tool:
@@ -532,7 +558,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                 ),
                             )
                             # Yield image info for LLM visibility (will be handled in step())
-                            yield ("cached_image", cached_img)
+                            yield _HandleFunctionToolsResult.from_cached_image(
+                                cached_img
+                            )
                         elif isinstance(res.content[0], EmbeddedResource):
                             resource = res.content[0].resource
                             if isinstance(resource, TextResourceContents):
@@ -568,7 +596,9 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                     ),
                                 )
                                 # Yield image info for LLM visibility
-                                yield ("cached_image", cached_img)
+                                yield _HandleFunctionToolsResult.from_cached_image(
+                                    cached_img
+                                )
                             else:
                                 tool_call_result_blocks.append(
                                     ToolCallMessageSegment(
@@ -629,23 +659,27 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         # yield the last tool call result
         if tool_call_result_blocks:
             last_tcr_content = str(tool_call_result_blocks[-1].content)
-            yield MessageChain(
-                type="tool_call_result",
-                chain=[
-                    Json(
-                        data={
-                            "id": func_tool_id,
-                            "ts": time.time(),
-                            "result": last_tcr_content,
-                        }
-                    )
-                ],
+            yield _HandleFunctionToolsResult.from_message_chain(
+                MessageChain(
+                    type="tool_call_result",
+                    chain=[
+                        Json(
+                            data={
+                                "id": func_tool_id,
+                                "ts": time.time(),
+                                "result": last_tcr_content,
+                            }
+                        )
+                    ],
+                )
             )
             logger.info(f"Tool `{func_tool_name}` Result: {last_tcr_content}")
 
         # 处理函数调用响应
         if tool_call_result_blocks:
-            yield tool_call_result_blocks
+            yield _HandleFunctionToolsResult.from_tool_call_result_blocks(
+                tool_call_result_blocks
+            )
 
     def _build_tool_requery_context(
         self, tool_names: list[str]
