@@ -282,9 +282,7 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             event=cron_event, plugin_context=ctx, config=config, req=req
         )
         if not result:
-            logger.error(
-                "Failed to build main agent for background handoff mission."
-            )
+            logger.error("Failed to build main agent for background handoff mission.")
             return
 
         runner = result.agent_runner
