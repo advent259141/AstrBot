@@ -158,8 +158,9 @@ paru -S astrbot-git
 - Discord
 - Satori
 - Misskey
+- LINE
 - WhatsApp (Скоро)
-- LINE (Скоро)
+
 
 **Поддерживаемые сообществом**
 
@@ -252,7 +253,7 @@ pre-commit install
 Особая благодарность всем контрибьюторам и разработчикам плагинов за их вклад в AstrBot ❤️
 
 <a href="https://github.com/AstrBotDevs/AstrBot/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=AstrBotDevs/AstrBot" />
+  <img src="https://contrib.rocks/image?repo=AstrBotDevs/AstrBot&max=200&columns=14" />
 </a>
 
 Кроме того, рождение этого проекта было бы невозможно без помощи следующих проектов с открытым исходным кодом:

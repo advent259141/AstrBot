@@ -5,7 +5,7 @@ from typing import Any, TypedDict
 
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
 
-VERSION = "4.16.0"
+VERSION = "4.18.0"
 DB_PATH = os.path.join(get_astrbot_data_path(), "data_v4.db")
 
 WEBHOOK_SUPPORTED_PLATFORMS = [
@@ -15,6 +15,7 @@ WEBHOOK_SUPPORTED_PLATFORMS = [
     "wecom_ai_bot",
     "slack",
     "lark",
+    "line",
 ]
 
 # 默认配置
@@ -67,6 +68,7 @@ DEFAULT_CONFIG = {
     "provider_settings": {
         "enable": True,
         "default_provider_id": "",
+        "fallback_chat_models": [],
         "default_image_caption_provider_id": "",
         "image_caption_prompt": "Please describe the image using Chinese.",
         "provider_pool": ["*"],  # "*" 表示使用所有可用的提供者
@@ -126,6 +128,7 @@ DEFAULT_CONFIG = {
             "add_cron_tools": True,
         },
         "computer_use_runtime": "local",
+        "computer_use_require_admin": True,
         "sandbox": {
             "booter": "shipyard",
             "shipyard_endpoint": "",
@@ -194,6 +197,12 @@ DEFAULT_CONFIG = {
         "host": "0.0.0.0",
         "port": 6185,
         "disable_access_log": True,
+        "ssl": {
+            "enable": False,
+            "cert_file": "",
+            "key_file": "",
+            "ca_certs": "",
+        },
     },
     "platform": [],
     "platform_specific": {
@@ -415,6 +424,7 @@ CONFIG_METADATA_2 = {
                         "slack_webhook_port": 6197,
                         "slack_webhook_path": "/astrbot-slack-webhook/callback",
                     },
+                    # LINE's config is located in line_adapter.py
                     "Satori": {
                         "id": "satori",
                         "type": "satori",
@@ -969,7 +979,7 @@ CONFIG_METADATA_2 = {
                         "api_base": "https://api.anthropic.com/v1",
                         "timeout": 120,
                         "proxy": "",
-                        "anth_thinking_config": {"budget": 0},
+                        "anth_thinking_config": {"type": "", "budget": 0, "effort": ""},
                     },
                     "Moonshot": {
                         "id": "moonshot",
@@ -1017,6 +1027,42 @@ CONFIG_METADATA_2 = {
                         "key": [],
                         "timeout": 120,
                         "api_base": "https://open.bigmodel.cn/api/paas/v4/",
+                        "proxy": "",
+                        "custom_headers": {},
+                    },
+                    "AIHubMix": {
+                        "id": "aihubmix",
+                        "provider": "aihubmix",
+                        "type": "aihubmix_chat_completion",
+                        "provider_type": "chat_completion",
+                        "enable": True,
+                        "key": [],
+                        "timeout": 120,
+                        "api_base": "https://aihubmix.com/v1",
+                        "proxy": "",
+                        "custom_headers": {},
+                    },
+                    "OpenRouter": {
+                        "id": "openrouter",
+                        "provider": "openrouter",
+                        "type": "openrouter_chat_completion",
+                        "provider_type": "chat_completion",
+                        "enable": True,
+                        "key": [],
+                        "timeout": 120,
+                        "api_base": "https://openrouter.ai/v1",
+                        "proxy": "",
+                        "custom_headers": {},
+                    },
+                    "NVIDIA": {
+                        "id": "nvidia",
+                        "provider": "nvidia",
+                        "type": "openai_chat_completion",
+                        "provider_type": "chat_completion",
+                        "enable": True,
+                        "key": [],
+                        "api_base": "https://integrate.api.nvidia.com/v1",
+                        "timeout": 120,
                         "proxy": "",
                         "custom_headers": {},
                     },
@@ -1918,13 +1964,25 @@ CONFIG_METADATA_2 = {
                         },
                     },
                     "anth_thinking_config": {
-                        "description": "Thinking Config",
+                        "description": "思考配置",
                         "type": "object",
                         "items": {
+                            "type": {
+                                "description": "思考类型",
+                                "type": "string",
+                                "options": ["", "adaptive"],
+                                "hint": "Opus 4.6+ / Sonnet 4.6+ 推荐设为 'adaptive'。留空则使用手动 budget 模式。参见: https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking",
+                            },
                             "budget": {
-                                "description": "Thinking Budget",
+                                "description": "思考预算",
                                 "type": "int",
-                                "hint": "Anthropic thinking.budget_tokens param. Must >= 1024. See: https://platform.claude.com/docs/en/build-with-claude/extended-thinking",
+                                "hint": "手动 budget_tokens，需 >= 1024。仅在 type 为空时生效。Opus 4.6 / Sonnet 4.6 上已弃用。参见: https://platform.claude.com/docs/en/build-with-claude/extended-thinking",
+                            },
+                            "effort": {
+                                "description": "思考深度",
+                                "type": "string",
+                                "options": ["", "low", "medium", "high", "max"],
+                                "hint": "type 为 'adaptive' 时控制思考深度。默认 'high'。'max' 仅限 Opus 4.6。参见: https://platform.claude.com/docs/en/build-with-claude/effort",
                             },
                         },
                     },
@@ -2205,6 +2263,10 @@ CONFIG_METADATA_2 = {
                     "default_provider_id": {
                         "type": "string",
                     },
+                    "fallback_chat_models": {
+                        "type": "list",
+                        "items": {"type": "string"},
+                    },
                     "wake_prefix": {
                         "type": "string",
                     },
@@ -2399,6 +2461,19 @@ CONFIG_METADATA_2 = {
                 "type": "string",
                 "options": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
             },
+            "dashboard.ssl.enable": {"type": "bool"},
+            "dashboard.ssl.cert_file": {
+                "type": "string",
+                "condition": {"dashboard.ssl.enable": True},
+            },
+            "dashboard.ssl.key_file": {
+                "type": "string",
+                "condition": {"dashboard.ssl.enable": True},
+            },
+            "dashboard.ssl.ca_certs": {
+                "type": "string",
+                "condition": {"dashboard.ssl.enable": True},
+            },
             "log_file_enable": {"type": "bool"},
             "log_file_path": {"type": "string", "condition": {"log_file_enable": True}},
             "log_file_max_mb": {"type": "int", "condition": {"log_file_enable": True}},
@@ -2502,14 +2577,21 @@ CONFIG_METADATA_3 = {
             },
             "ai": {
                 "description": "模型",
-                "hint": "当使用非内置 Agent 执行器时，默认聊天模型和默认图片转述模型可能会无效，但某些插件会依赖此配置项来调用 AI 能力。",
+                "hint": "当使用非内置 Agent 执行器时，默认对话模型和默认图片转述模型可能会无效，但某些插件会依赖此配置项来调用 AI 能力。",
                 "type": "object",
                 "items": {
                     "provider_settings.default_provider_id": {
-                        "description": "默认聊天模型",
+                        "description": "默认对话模型",
                         "type": "string",
                         "_special": "select_provider",
                         "hint": "留空时使用第一个模型",
+                    },
+                    "provider_settings.fallback_chat_models": {
+                        "description": "回退对话模型列表",
+                        "type": "list",
+                        "items": {"type": "string"},
+                        "_special": "select_providers",
+                        "hint": "主聊天模型请求失败时，按顺序切换到这些模型。",
                     },
                     "provider_settings.default_image_caption_provider_id": {
                         "description": "默认图片转述模型",
@@ -2679,6 +2761,11 @@ CONFIG_METADATA_3 = {
                         "options": ["none", "local", "sandbox"],
                         "labels": ["无", "本地", "沙箱"],
                         "hint": "选择 Computer Use 运行环境。",
+                    },
+                    "provider_settings.computer_use_require_admin": {
+                        "description": "需要 AstrBot 管理员权限",
+                        "type": "bool",
+                        "hint": "开启后，需要 AstrBot 管理员权限才能调用使用电脑能力。在平台配置->管理员中可添加管理员。使用 /sid 指令查看管理员 ID。",
                     },
                     "provider_settings.sandbox.booter": {
                         "description": "沙箱环境驱动器",
@@ -3405,6 +3492,29 @@ CONFIG_METADATA_3_SYSTEM = {
                         "type": "string",
                         "hint": "控制台输出日志的级别。",
                         "options": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                    },
+                    "dashboard.ssl.enable": {
+                        "description": "启用 WebUI HTTPS",
+                        "type": "bool",
+                        "hint": "启用后，WebUI 将直接使用 HTTPS 提供服务。",
+                    },
+                    "dashboard.ssl.cert_file": {
+                        "description": "SSL 证书文件路径",
+                        "type": "string",
+                        "hint": "证书文件路径（PEM）。支持绝对路径和相对路径（相对于当前工作目录）。",
+                        "condition": {"dashboard.ssl.enable": True},
+                    },
+                    "dashboard.ssl.key_file": {
+                        "description": "SSL 私钥文件路径",
+                        "type": "string",
+                        "hint": "私钥文件路径（PEM）。支持绝对路径和相对路径（相对于当前工作目录）。",
+                        "condition": {"dashboard.ssl.enable": True},
+                    },
+                    "dashboard.ssl.ca_certs": {
+                        "description": "SSL CA 证书文件路径",
+                        "type": "string",
+                        "hint": "可选。用于指定 CA 证书文件路径。",
+                        "condition": {"dashboard.ssl.enable": True},
                     },
                     "log_file_enable": {
                         "description": "启用文件日志",

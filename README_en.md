@@ -154,9 +154,9 @@ yay -S astrbot-git
 paru -S astrbot-git
 ```
 
-#### Desktop Electron Build
+#### Desktop (Tauri)
 
-For desktop build steps (Electron packaging, `pnpm` workflow), see [`desktop/README.md`](desktop/README.md).
+Desktop packaging has moved to a standalone Tauri repository: [https://github.com/AstrBotDevs/AstrBot-desktop](https://github.com/AstrBotDevs/AstrBot-desktop).
 
 ## Supported Messaging Platforms
 
@@ -172,8 +172,8 @@ For desktop build steps (Electron packaging, `pnpm` workflow), see [`desktop/REA
 - Discord
 - Satori
 - Misskey
+- LINE
 - WhatsApp (Coming Soon)
-- LINE (Coming Soon)
 
 **Community Maintained**
 
@@ -268,7 +268,7 @@ pre-commit install
 Special thanks to all Contributors and plugin developers for their contributions to AstrBot ❤️
 
 <a href="https://github.com/AstrBotDevs/AstrBot/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=AstrBotDevs/AstrBot" />
+  <img src="https://contrib.rocks/image?repo=AstrBotDevs/AstrBot&max=200&columns=14" />
 </a>
 
 Additionally, the birth of this project would not have been possible without the help of the following open-source projects:
