@@ -47,9 +47,9 @@ class HandoffTool(FunctionTool, Generic[TContext]):
                 "background_task": {
                     "type": "boolean",
                     "description": (
-                        "Defaults to false. If true, will spawn the agent in the background. "
-                        "When the subagent returns a result, you will be notified. "
-                        "Enable this when the task is long-running or user wants to continue the current conversation without waiting for the result. "
+                        "Defaults to false. "
+                        "Set to true if the task may take noticeable time, involves external tools, or the user does not need to wait. "
+                        "Use false only for quick, immediate tasks."
                     ),
                 },
             },
