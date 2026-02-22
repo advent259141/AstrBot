@@ -45,7 +45,7 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
 
         """
         if isinstance(tool, HandoffTool):
-            is_bg = tool_args.pop("background_mission", False)
+            is_bg = tool_args.pop("background_task", False)
             if is_bg:
                 async for r in cls._execute_handoff_background(
                     tool, run_context, **tool_args
@@ -335,8 +335,11 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
         )
         req.prompt = (
             "Proceed according to your system instructions. "
-            "Output using same language as previous conversation."
-            " After completing your task, summarize and output your actions and results."
+            "Output using same language as previous conversation. "
+            "If you need to deliver the result to the user immediately, "
+            "you MUST use `send_message_to_user` tool to send the message directly to the user, "
+            "otherwise the user will not see the result. "
+            "After completing your task, summarize and output your actions and results. "
         )
         if not req.func_tool:
             req.func_tool = ToolSet()
