@@ -63,7 +63,8 @@ class ProviderVolcengineTTS(TTSProvider):
         """异步方法获取语音文件路径"""
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer; {self.api_key}",
+            "Authorization": f"Bearer;{self.api_key}",
+            "Accept-Encoding": "gzip, deflate",
         }
 
         payload = self._build_request_payload(text)
