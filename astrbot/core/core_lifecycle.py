@@ -29,6 +29,7 @@ from astrbot.core.pipeline.scheduler import PipelineContext, PipelineScheduler
 from astrbot.core.platform.manager import PlatformManager
 from astrbot.core.platform_message_history_mgr import PlatformMessageHistoryManager
 from astrbot.core.provider.manager import ProviderManager
+from astrbot.core.spaceship import SpaceshipRuntime, register_spaceship_tools
 from astrbot.core.star.context import Context
 from astrbot.core.star.star_handler import EventType, star_handlers_registry, star_map
 from astrbot.core.star.star_manager import PluginManager
@@ -57,6 +58,7 @@ class AstrBotCoreLifecycle:
         self.db = db  # 初始化数据库
 
         self.subagent_orchestrator: SubAgentOrchestrator | None = None
+        self.spaceship_runtime: SpaceshipRuntime | None = None
         self.cron_manager: CronJobManager | None = None
         self.temp_dir_cleaner: TempDirCleaner | None = None
 
@@ -96,6 +98,18 @@ class AstrBotCoreLifecycle:
             )
         except Exception as e:
             logger.error(f"Subagent orchestrator init failed: {e}", exc_info=True)
+
+    def _register_spaceship_tools(self) -> None:
+        """Register spaceship tools to FunctionToolManager."""
+        if self.spaceship_runtime is None:
+            return
+
+        register_spaceship_tools(
+            runtime=self.spaceship_runtime,
+            llm_tools=self.provider_manager.llm_tools,
+            config_getter=lambda: self.astrbot_config.get("spaceship", {}),
+        )
+        logger.info("Spaceship tools registered successfully")
 
     async def initialize(self) -> None:
         """初始化 AstrBot 核心生命周期管理类.
@@ -178,6 +192,11 @@ class AstrBotCoreLifecycle:
         # Dynamic subagents (handoff tools) from config.
         await self._init_or_reload_subagent_orchestrator()
 
+        self.spaceship_runtime = SpaceshipRuntime()
+
+        # Register spaceship tools directly into the function tool manager
+        self._register_spaceship_tools()
+
         # 初始化提供给插件的上下文
         self.star_context = Context(
             self.event_queue,
@@ -192,6 +211,7 @@ class AstrBotCoreLifecycle:
             self.kb_manager,
             self.cron_manager,
             self.subagent_orchestrator,
+            self.spaceship_runtime,
         )
 
         # 初始化插件管理器

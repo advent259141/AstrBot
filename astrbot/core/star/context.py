@@ -47,6 +47,7 @@ logger = logging.getLogger("astrbot")
 
 if TYPE_CHECKING:
     from astrbot.core.cron.manager import CronJobManager
+    from astrbot.core.spaceship import SpaceshipRuntime
 
 
 class PlatformManagerProtocol(Protocol):
@@ -76,6 +77,7 @@ class Context:
         knowledge_base_manager: KnowledgeBaseManager,
         cron_manager: CronJobManager,
         subagent_orchestrator: SubAgentOrchestrator | None = None,
+        spaceship_runtime: SpaceshipRuntime | None = None,
     ) -> None:
         self._event_queue = event_queue
         """事件队列。消息平台通过事件队列传递消息事件。"""
@@ -100,6 +102,8 @@ class Context:
         self.cron_manager = cron_manager
         """Cron job manager, initialized by core lifecycle."""
         self.subagent_orchestrator = subagent_orchestrator
+        self.spaceship_runtime = spaceship_runtime
+        """Spaceship runtime, initialized by core lifecycle."""
 
     async def llm_generate(
         self,

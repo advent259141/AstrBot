@@ -1,0 +1,54 @@
+{
+  "page": {
+    "title": "Spaceship Node Gateway",
+    "builtin": "Built-in",
+    "subtitle": "A built-in AstrBot module for remote node management, gateway configuration, and future command dispatch capabilities."
+  },
+  "actions": {
+    "refresh": "Refresh",
+    "save": "Save",
+    "close": "Close"
+  },
+  "section": {
+    "gateway": "Gateway Settings",
+    "summary": "Summary",
+    "nodes": "Nodes",
+    "nodesHint": "Displays registered nodes and recently connected agents."
+  },
+  "form": {
+    "enable": "Enable Spaceship Gateway",
+    "enableHint": "Allow AstrBot to host remote node management capabilities.",
+    "autoRegister": "Allow Automatic Node Registration",
+    "autoRegisterHint": "Agents with valid bootstrap credentials can register themselves automatically.",
+    "websocketPath": "WebSocket Path",
+    "bootstrapToken": "Bootstrap Token",
+    "heartbeatTimeout": "Heartbeat Timeout (seconds)"
+  },
+  "summary": {
+    "totalNodes": "Total Nodes",
+    "activeNodes": "Active Nodes",
+    "gatewayStatus": "Gateway Status",
+    "defaultScopes": "Default Granted Scopes"
+  },
+  "status": {
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "table": {
+    "alias": "Node",
+    "hostname": "Hostname",
+    "platform": "Platform",
+    "status": "Status",
+    "scopes": "Scopes",
+    "lastSeen": "Last Seen"
+  },
+  "messages": {
+    "loadConfigFailed": "Failed to load config",
+    "loadNodesFailed": "Failed to load nodes",
+    "saveSuccess": "Saved successfully",
+    "saveFailed": "Failed to save"
+  },
+  "empty": {
+    "nodes": "No registered nodes yet"
+  }
+}

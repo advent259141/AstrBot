@@ -1,0 +1,54 @@
+{
+  "page": {
+    "title": "Spaceship 节点网关",
+    "builtin": "内建",
+    "subtitle": "作为 AstrBot 本体内置的远程节点管理模块，用于展示节点、管理网关配置，并为后续命令下发提供入口。"
+  },
+  "actions": {
+    "refresh": "刷新",
+    "save": "保存",
+    "close": "关闭"
+  },
+  "section": {
+    "gateway": "网关设置",
+    "summary": "运行摘要",
+    "nodes": "节点列表",
+    "nodesHint": "显示当前已注册或最近连接过的节点。"
+  },
+  "form": {
+    "enable": "启用 Spaceship 网关",
+    "enableHint": "打开后允许 AstrBot 承载远程节点管理能力。",
+    "autoRegister": "允许自动注册节点",
+    "autoRegisterHint": "启用后，持有有效引导凭证的 agent 可自动登记到节点列表。",
+    "websocketPath": "WebSocket 路径",
+    "bootstrapToken": "引导令牌",
+    "heartbeatTimeout": "心跳超时秒数"
+  },
+  "summary": {
+    "totalNodes": "节点总数",
+    "activeNodes": "在线节点",
+    "gatewayStatus": "网关状态",
+    "defaultScopes": "默认授权能力"
+  },
+  "status": {
+    "enabled": "已启用",
+    "disabled": "未启用"
+  },
+  "table": {
+    "alias": "节点",
+    "hostname": "主机名",
+    "platform": "平台",
+    "status": "状态",
+    "scopes": "能力",
+    "lastSeen": "最近心跳"
+  },
+  "messages": {
+    "loadConfigFailed": "加载配置失败",
+    "loadNodesFailed": "加载节点列表失败",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败"
+  },
+  "empty": {
+    "nodes": "当前没有已注册节点"
+  }
+}

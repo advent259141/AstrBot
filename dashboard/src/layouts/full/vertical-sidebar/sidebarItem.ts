@@ -117,6 +117,11 @@ const sidebarItem: menu[] = [
         to: '/subagent'
       },
       {
+        title: 'core.navigation.spaceship',
+        icon: 'mdi-rocket-launch-outline',
+        to: '/spaceship'
+      },
+      {
         title: 'core.navigation.dashboard',
         icon: 'mdi-view-dashboard',
         to: '/dashboard/default'

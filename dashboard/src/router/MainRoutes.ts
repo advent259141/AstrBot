@@ -75,6 +75,11 @@ const MainRoutes = {
       component: () => import('@/views/SubAgentPage.vue')
     },
     {
+      name: 'Spaceship',
+      path: '/spaceship',
+      component: () => import('@/views/SpaceshipPage.vue')
+    },
+    {
       name: 'CronJobs',
       path: '/cron',
       component: () => import('@/views/CronJobPage.vue')

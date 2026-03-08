@@ -158,6 +158,14 @@ DEFAULT_CONFIG = {
         ),
         "agents": [],
     },
+    "spaceship": {
+        "enable": False,
+        "websocket_path": "/api/spaceship/ws",
+        "heartbeat_timeout_sec": 60,
+        "allow_auto_register": False,
+        "bootstrap_token": "",
+        "default_granted_scopes": ["exec", "list_dir", "read_file"],
+    },
     "provider_stt_settings": {
         "enable": False,
         "provider_id": "",

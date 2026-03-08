@@ -16,6 +16,7 @@ from .platform import PlatformRoute
 from .plugin import PluginRoute
 from .session_management import SessionManagementRoute
 from .skills import SkillsRoute
+from .spaceship import SpaceshipRoute
 from .stat import StatRoute
 from .static_file import StaticFileRoute
 from .subagent import SubAgentRoute
@@ -42,6 +43,7 @@ __all__ = [
     "SessionManagementRoute",
     "StatRoute",
     "StaticFileRoute",
+    "SpaceshipRoute",
     "SubAgentRoute",
     "ToolsRoute",
     "SkillsRoute",
