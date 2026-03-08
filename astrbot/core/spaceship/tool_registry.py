@@ -139,6 +139,39 @@ def register_spaceship_tools(
         handler=_make_readfile_handler(runtime, config_getter),
     )
 
+    llm_tools.add_func(
+        name="writefile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "node_id",
+                "description": "必填。目标节点 ID。",
+            },
+            {
+                "type": "string",
+                "name": "path",
+                "description": "必填。目标文件路径。",
+            },
+            {
+                "type": "string",
+                "name": "content",
+                "description": "必填。要写入的文本内容。",
+            },
+            {
+                "type": "boolean",
+                "name": "append",
+                "description": "可选。是否以追加方式写入。",
+            },
+            {
+                "type": "boolean",
+                "name": "create_dirs",
+                "description": "可选。是否自动创建父目录。",
+            },
+        ],
+        desc="向指定 spaceship 节点上的文件写入文本内容",
+        handler=_make_writefile_handler(runtime, config_getter),
+    )
+
 
 def _check_enabled(config_getter: Callable[[], dict]) -> tuple[bool, str | None]:
     """Check if spaceship is enabled in config.
@@ -312,3 +345,39 @@ def _make_readfile_handler(
             return f"Error: {exc}"
 
     return readfile_handler
+
+
+def _make_writefile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create writefile tool handler."""
+    from .models import WriteFileToolRequest
+
+    async def writefile_handler(
+        event: object,
+        node_id: str,
+        path: str,
+        content: str,
+        append: bool = False,
+        create_dirs: bool = True,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            result = await runtime.write_file(
+                request=WriteFileToolRequest(
+                    node_id=node_id,
+                    path=path,
+                    content=content,
+                    append=append,
+                    create_dirs=create_dirs,
+                ),
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return writefile_handler

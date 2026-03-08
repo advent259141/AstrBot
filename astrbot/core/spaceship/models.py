@@ -103,6 +103,17 @@ class ReadFileToolRequest:
     max_bytes: int = 65536
 
 
+@dataclass(slots=True)
+class WriteFileToolRequest:
+    """Request to write a file on a remote node."""
+
+    node_id: str
+    path: str
+    content: str
+    append: bool = False
+    create_dirs: bool = True
+
+
 class SessionConnection(Protocol):
     """Protocol for websocket connections that can send JSON."""
 

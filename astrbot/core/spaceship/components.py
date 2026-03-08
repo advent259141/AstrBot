@@ -120,6 +120,39 @@ class SpaceshipFileSystemComponent:
             "truncated": result.truncated,
         }
 
+    async def write_file(
+        self,
+        path: str,
+        content: str,
+        append: bool = False,
+        create_dirs: bool = True,
+    ) -> dict[str, Any]:
+        """Write content to a file."""
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="write_file",
+            node_id=self.node_id,
+            requested_by="system",
+            requested_via="runtime_adapter",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=30,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "path": path,
+                "content": content,
+                "append": append,
+                "create_dirs": create_dirs,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        if result.final_state != "success":
+            raise RuntimeError(result.stderr or "write_file failed")
+        return {
+            "success": True,
+            "content": result.stdout,
+        }
+
 
 @dataclass(slots=True)
 class SpaceshipNodeBooter:

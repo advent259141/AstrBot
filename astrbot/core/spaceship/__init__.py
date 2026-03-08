@@ -20,6 +20,7 @@ from .models import (
     SpaceshipNode,
     TaskResult,
     TaskSpec,
+    WriteFileToolRequest,
 )
 from .runtime import SpaceshipRuntime
 from .session import ActiveSession, SessionHub
@@ -44,5 +45,6 @@ __all__ = [
     "TaskDispatcher",
     "TaskResult",
     "TaskSpec",
+    "WriteFileToolRequest",
     "register_spaceship_tools",
 ]

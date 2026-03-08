@@ -11,6 +11,7 @@ from .models import (
     ReadFileToolRequest,
     ShellToolRequest,
     TaskSpec,
+    WriteFileToolRequest,
 )
 
 if TYPE_CHECKING:
@@ -82,6 +83,28 @@ class SpaceshipToolService:
             args={
                 "path": request.path,
                 "max_bytes": request.max_bytes,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        return result.stdout if result.final_state == "success" else result.stderr
+
+    async def write_file(self, request: WriteFileToolRequest, requested_by: str) -> str:
+        """Write a file on a remote node."""
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="write_file",
+            node_id=request.node_id,
+            requested_by=requested_by,
+            requested_via="tool",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=30,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "path": request.path,
+                "content": request.content,
+                "append": request.append,
+                "create_dirs": request.create_dirs,
             },
         )
         result = await self.dispatcher.dispatch(task)

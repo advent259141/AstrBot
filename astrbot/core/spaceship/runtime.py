@@ -15,6 +15,7 @@ from .models import (
     SessionConnection,
     ShellToolRequest,
     SpaceshipNode,
+    WriteFileToolRequest,
 )
 from .session import SessionHub
 from .tools import SpaceshipToolService
@@ -147,5 +148,11 @@ class SpaceshipRuntime:
     async def read_file(self, request: ReadFileToolRequest, requested_by: str) -> str:
         """Read file from a remote node (tool layer)."""
         return await self.tool_service.read_file(
+            request=request, requested_by=requested_by
+        )
+
+    async def write_file(self, request: WriteFileToolRequest, requested_by: str) -> str:
+        """Write file on a remote node (tool layer)."""
+        return await self.tool_service.write_file(
             request=request, requested_by=requested_by
         )
