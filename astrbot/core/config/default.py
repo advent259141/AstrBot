@@ -227,6 +227,7 @@ DEFAULT_CONFIG = {
     "trace_log_max_mb": 20,
     "pip_install_arg": "",
     "pypi_index_url": "https://mirrors.aliyun.com/pypi/simple/",
+    "skill_market_url": "",
     "persona": [],  # deprecated
     "timezone": "Asia/Shanghai",
     "callback_api_base": "",
@@ -2517,6 +2518,9 @@ CONFIG_METADATA_2 = {
             "pypi_index_url": {
                 "type": "string",
             },
+            "skill_market_url": {
+                "type": "string",
+            },
             "default_kb_collection": {
                 "type": "string",
             },
@@ -3583,6 +3587,11 @@ CONFIG_METADATA_3_SYSTEM = {
                         "description": "PyPI 软件仓库地址",
                         "type": "string",
                         "hint": "安装 Python 依赖时请求的 PyPI 软件仓库地址。默认为 https://mirrors.aliyun.com/pypi/simple/",
+                    },
+                    "skill_market_url": {
+                        "description": "SkillMarket 服务地址",
+                        "type": "string",
+                        "hint": "用于读取在线 Skills 列表和安装上报，例如 http://localhost:8000。留空则隐藏在线市场功能。",
                     },
                     "callback_api_base": {
                         "description": "对外可达的回调接口地址",

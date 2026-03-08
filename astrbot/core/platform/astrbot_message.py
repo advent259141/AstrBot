@@ -30,7 +30,7 @@ class Group:
     group_owner: str | None = None
     """群主 id"""
     group_admins: list[str] | None = None
-    """群管理员 id"""
+    """管理员 id"""
     members: list[MessageMember] | None = None
     """所有群成员"""
 
