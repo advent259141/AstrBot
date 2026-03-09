@@ -36,7 +36,10 @@ class SpaceshipRuntime:
         self.session_hub = SessionHub()
         self.dispatcher = TaskDispatcher(session_hub=self.session_hub)
         self.gateway = SpaceshipGatewayService(runtime=self)
-        self.tool_service = SpaceshipToolService(dispatcher=self.dispatcher)
+        self.tool_service = SpaceshipToolService(
+            dispatcher=self.dispatcher,
+            runtime=self,
+        )
 
     def upsert_node(self, payload: dict[str, Any]) -> SpaceshipNode:
         """Update or insert a node from a payload."""
@@ -133,26 +136,34 @@ class SpaceshipRuntime:
             return SpaceshipNodeBooter(dispatcher=self.dispatcher, node_id=node_id)
         return None
 
+    async def enter_node(self, node_id: str, requested_by: str) -> str:
+        """Enter a node workspace for current session."""
+        return await self.tool_service.enter_node(node_id=node_id, requested_by=requested_by)
+
+    async def exit_node(self, requested_by: str) -> str:
+        """Exit current node workspace for current session."""
+        return await self.tool_service.exit_node(requested_by=requested_by)
+
     async def execute_shell(self, request: ShellToolRequest, requested_by: str) -> str:
-        """Execute shell command on a remote node (tool layer)."""
+        """Execute shell command on the currently entered node (tool layer)."""
         return await self.tool_service.execute_shell(
             request=request, requested_by=requested_by
         )
 
     async def list_dir(self, request: ListDirToolRequest, requested_by: str) -> str:
-        """List directory on a remote node (tool layer)."""
+        """List directory on the currently entered node (tool layer)."""
         return await self.tool_service.list_dir(
             request=request, requested_by=requested_by
         )
 
     async def read_file(self, request: ReadFileToolRequest, requested_by: str) -> str:
-        """Read file from a remote node (tool layer)."""
+        """Read file from the currently entered node (tool layer)."""
         return await self.tool_service.read_file(
             request=request, requested_by=requested_by
         )
 
     async def write_file(self, request: WriteFileToolRequest, requested_by: str) -> str:
-        """Write file on a remote node (tool layer)."""
+        """Write file on the currently entered node (tool layer)."""
         return await self.tool_service.write_file(
             request=request, requested_by=requested_by
         )

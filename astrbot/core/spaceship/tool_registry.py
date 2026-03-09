@@ -52,15 +52,30 @@ def register_spaceship_tools(
         handler=_make_getnodeinfo_handler(runtime, config_getter),
     )
 
-    # executeshell tool
     llm_tools.add_func(
-        name="executeshell",
+        name="enternode",
         func_args=[
             {
                 "type": "string",
                 "name": "node_id",
-                "description": "必填。目标节点 ID。",
-            },
+                "description": "必填。要进入并设为当前工作节点的节点 ID。",
+            }
+        ],
+        desc="进入指定 spaceship 节点，后续 executeshell/listdir/readfile/writefile 默认都在该节点执行",
+        handler=_make_enternode_handler(runtime, config_getter),
+    )
+
+    llm_tools.add_func(
+        name="exitnode",
+        func_args=[],
+        desc="退出当前 spaceship 节点工作区，清除当前选中的节点",
+        handler=_make_exitnode_handler(runtime, config_getter),
+    )
+
+    # executeshell tool
+    llm_tools.add_func(
+        name="executeshell",
+        func_args=[
             {
                 "type": "string",
                 "name": "command",
@@ -77,7 +92,7 @@ def register_spaceship_tools(
                 "description": "可选。超时秒数。",
             },
         ],
-        desc="在指定 spaceship 节点上执行 shell 命令",
+        desc="在当前已进入的 spaceship 节点上执行 shell 命令；使用前需先调用 enternode",
         handler=_make_executeshell_handler(runtime, config_getter),
     )
 
@@ -85,11 +100,6 @@ def register_spaceship_tools(
     llm_tools.add_func(
         name="listdir",
         func_args=[
-            {
-                "type": "string",
-                "name": "node_id",
-                "description": "必填。目标节点 ID。",
-            },
             {
                 "type": "string",
                 "name": "path",
@@ -111,7 +121,7 @@ def register_spaceship_tools(
                 "description": "可选。最大返回条目数。",
             },
         ],
-        desc="查看指定 spaceship 节点上的目录内容",
+        desc="查看当前已进入的 spaceship 节点上的目录内容；使用前需先调用 enternode",
         handler=_make_listdir_handler(runtime, config_getter),
     )
 
@@ -119,11 +129,6 @@ def register_spaceship_tools(
     llm_tools.add_func(
         name="readfile",
         func_args=[
-            {
-                "type": "string",
-                "name": "node_id",
-                "description": "必填。目标节点 ID。",
-            },
             {
                 "type": "string",
                 "name": "path",
@@ -135,18 +140,13 @@ def register_spaceship_tools(
                 "description": "可选。最大读取字节数。",
             },
         ],
-        desc="读取指定 spaceship 节点上的文本文件内容",
+        desc="读取当前已进入的 spaceship 节点上的文本文件内容；使用前需先调用 enternode",
         handler=_make_readfile_handler(runtime, config_getter),
     )
 
     llm_tools.add_func(
         name="writefile",
         func_args=[
-            {
-                "type": "string",
-                "name": "node_id",
-                "description": "必填。目标节点 ID。",
-            },
             {
                 "type": "string",
                 "name": "path",
@@ -168,7 +168,7 @@ def register_spaceship_tools(
                 "description": "可选。是否自动创建父目录。",
             },
         ],
-        desc="向指定 spaceship 节点上的文件写入文本内容",
+        desc="向当前已进入的 spaceship 节点上的文件写入文本内容；使用前需先调用 enternode",
         handler=_make_writefile_handler(runtime, config_getter),
     )
 
@@ -186,13 +186,21 @@ def _check_enabled(config_getter: Callable[[], dict]) -> tuple[bool, str | None]
 
 
 def _requested_by_from_event(event: object) -> str:
-    """Extract a stable requested_by identifier from an AstrBot event."""
+    """Extract a stable session-scoped identifier from an AstrBot event."""
+    unified_msg_origin = getattr(event, "unified_msg_origin", None)
+    if unified_msg_origin is not None:
+        normalized = str(unified_msg_origin).strip()
+        if normalized:
+            return normalized
+
     getter = getattr(event, "get_sender_id", None)
     if callable(getter):
         try:
             sender_id = getter()
             if sender_id is not None:
-                return str(sender_id)
+                normalized = str(sender_id).strip()
+                if normalized:
+                    return normalized
         except Exception:
             pass
     return "system"
@@ -247,6 +255,45 @@ def _make_getnodeinfo_handler(
     return getnodeinfo_handler
 
 
+def _make_enternode_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create enternode tool handler."""
+
+    async def enternode_handler(event: object, node_id: str) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            return await runtime.enter_node(
+                node_id=node_id,
+                requested_by=_requested_by_from_event(event),
+            )
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return enternode_handler
+
+
+def _make_exitnode_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create exitnode tool handler."""
+
+    async def exitnode_handler(event: object) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            return await runtime.exit_node(requested_by=_requested_by_from_event(event))
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return exitnode_handler
+
+
 def _make_executeshell_handler(
     runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
 ):
@@ -255,7 +302,6 @@ def _make_executeshell_handler(
 
     async def executeshell_handler(
         event: object,
-        node_id: str,
         command: str,
         cwd: str = "",
         timeout_sec: int = 30,
@@ -267,7 +313,6 @@ def _make_executeshell_handler(
         try:
             result = await runtime.execute_shell(
                 request=ShellToolRequest(
-                    node_id=node_id,
                     command=command,
                     cwd=cwd or None,
                     timeout_sec=timeout_sec,
@@ -287,7 +332,6 @@ def _make_listdir_handler(runtime: SpaceshipRuntime, config_getter: Callable[[],
 
     async def listdir_handler(
         event: object,
-        node_id: str,
         path: str = ".",
         recursive: bool = False,
         show_hidden: bool = False,
@@ -300,7 +344,6 @@ def _make_listdir_handler(runtime: SpaceshipRuntime, config_getter: Callable[[],
         try:
             result = await runtime.list_dir(
                 request=ListDirToolRequest(
-                    node_id=node_id,
                     path=path,
                     recursive=recursive,
                     show_hidden=show_hidden,
@@ -323,7 +366,6 @@ def _make_readfile_handler(
 
     async def readfile_handler(
         event: object,
-        node_id: str,
         path: str,
         max_bytes: int = 65536,
     ) -> str:
@@ -334,7 +376,6 @@ def _make_readfile_handler(
         try:
             result = await runtime.read_file(
                 request=ReadFileToolRequest(
-                    node_id=node_id,
                     path=path,
                     max_bytes=max_bytes,
                 ),
@@ -355,7 +396,6 @@ def _make_writefile_handler(
 
     async def writefile_handler(
         event: object,
-        node_id: str,
         path: str,
         content: str,
         append: bool = False,
@@ -368,7 +408,6 @@ def _make_writefile_handler(
         try:
             result = await runtime.write_file(
                 request=WriteFileToolRequest(
-                    node_id=node_id,
                     path=path,
                     content=content,
                     append=append,

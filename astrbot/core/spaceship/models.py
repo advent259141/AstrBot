@@ -72,9 +72,8 @@ class TaskResult:
 
 @dataclass(slots=True)
 class ShellToolRequest:
-    """Request to execute a shell command on a remote node."""
+    """Request to execute a shell command on the currently entered node."""
 
-    node_id: str
     command: str
     cwd: str | None = None
     timeout_sec: int = 30
@@ -85,9 +84,8 @@ class ShellToolRequest:
 
 @dataclass(slots=True)
 class ListDirToolRequest:
-    """Request to list directory contents on a remote node."""
+    """Request to list directory contents on the currently entered node."""
 
-    node_id: str
     path: str = "."
     recursive: bool = False
     show_hidden: bool = False
@@ -96,18 +94,16 @@ class ListDirToolRequest:
 
 @dataclass(slots=True)
 class ReadFileToolRequest:
-    """Request to read a file from a remote node."""
+    """Request to read a file from the currently entered node."""
 
-    node_id: str
     path: str
     max_bytes: int = 65536
 
 
 @dataclass(slots=True)
 class WriteFileToolRequest:
-    """Request to write a file on a remote node."""
+    """Request to write a file on the currently entered node."""
 
-    node_id: str
     path: str
     content: str
     append: bool = False
