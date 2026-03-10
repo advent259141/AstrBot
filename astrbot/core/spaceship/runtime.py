@@ -10,6 +10,8 @@ from .components import SpaceshipNodeBooter
 from .dispatcher import TaskDispatcher
 from .gateway import SpaceshipGatewayService
 from .models import (
+    EditFileToolRequest,
+    GrepToolRequest,
     ListDirToolRequest,
     ReadFileToolRequest,
     SessionConnection,
@@ -165,5 +167,25 @@ class SpaceshipRuntime:
     async def write_file(self, request: WriteFileToolRequest, requested_by: str) -> str:
         """Write file on the currently entered node (tool layer)."""
         return await self.tool_service.write_file(
+            request=request, requested_by=requested_by
+        )
+
+    async def cancel_task(self, task_id: str, node_id: str, reason: str = "") -> bool:
+        """Cancel a running task on a remote node."""
+        return await self.dispatcher.cancel(task_id, node_id, reason)
+
+    def list_pending_tasks(self) -> list[str]:
+        """Return task IDs of currently pending (in-flight) tasks."""
+        return self.dispatcher.list_pending_tasks()
+
+    async def edit_file(self, request: EditFileToolRequest, requested_by: str) -> str:
+        """Edit file on the currently entered node via search-and-replace (tool layer)."""
+        return await self.tool_service.edit_file(
+            request=request, requested_by=requested_by
+        )
+
+    async def grep(self, request: GrepToolRequest, requested_by: str) -> str:
+        """Search for text patterns in files on the currently entered node (tool layer)."""
+        return await self.tool_service.grep(
             request=request, requested_by=requested_by
         )

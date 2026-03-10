@@ -9,6 +9,8 @@ from uuid import uuid4
 from astrbot.core import sp
 
 from .models import (
+    EditFileToolRequest,
+    GrepToolRequest,
     ListDirToolRequest,
     ReadFileToolRequest,
     ShellToolRequest,
@@ -174,6 +176,53 @@ class SpaceshipToolService:
                 "content": request.content,
                 "append": request.append,
                 "create_dirs": request.create_dirs,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        return result.stdout if result.final_state == "success" else result.stderr
+
+    async def edit_file(self, request: EditFileToolRequest, requested_by: str) -> str:
+        """Edit a file on the currently entered node via search-and-replace."""
+        node_id = await self.require_selected_node_id(requested_by)
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="edit_file",
+            node_id=node_id,
+            requested_by=requested_by,
+            requested_via="tool",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=30,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "path": request.path,
+                "edits": request.edits,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        return result.stdout if result.final_state == "success" else result.stderr
+
+    async def grep(self, request: GrepToolRequest, requested_by: str) -> str:
+        """Search for text patterns in files on the currently entered node."""
+        node_id = await self.require_selected_node_id(requested_by)
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="grep",
+            node_id=node_id,
+            requested_by=requested_by,
+            requested_via="tool",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=30,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "pattern": request.pattern,
+                "path": request.path,
+                "is_regex": request.is_regex,
+                "case_insensitive": request.case_insensitive,
+                "include_globs": request.include_globs or [],
+                "exclude_globs": request.exclude_globs or [],
+                "max_matches": request.max_matches,
             },
         )
         result = await self.dispatcher.dispatch(task)

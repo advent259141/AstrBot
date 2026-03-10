@@ -172,6 +172,96 @@ def register_spaceship_tools(
         handler=_make_writefile_handler(runtime, config_getter),
     )
 
+    # canceltask tool
+    llm_tools.add_func(
+        name="canceltask",
+        func_args=[
+            {
+                "type": "string",
+                "name": "task_id",
+                "description": "必填。要取消的任务 ID。",
+            },
+            {
+                "type": "string",
+                "name": "node_id",
+                "description": "必填。任务所在节点 ID。",
+            },
+            {
+                "type": "string",
+                "name": "reason",
+                "description": "可选。取消原因。",
+            },
+        ],
+        desc="取消正在 spaceship 节点上运行的任务",
+        handler=_make_canceltask_handler(runtime, config_getter),
+    )
+
+    # editfile tool
+    llm_tools.add_func(
+        name="editfile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "path",
+                "description": "必填。要编辑的文件路径。",
+            },
+            {
+                "type": "string",
+                "name": "edits",
+                "description": (
+                    '必填。JSON 数组字符串，每个元素为 {"search": "要查找的原文", "replace": "替换后的内容"}。'
+                    "每个 search 字符串必须在文件中恰好出现一次。"
+                ),
+            },
+        ],
+        desc="使用 search-and-replace 方式编辑当前已进入的 spaceship 节点上的文件；使用前需先调用 enternode",
+        handler=_make_editfile_handler(runtime, config_getter),
+    )
+
+    # grepfile tool
+    llm_tools.add_func(
+        name="grepfile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "pattern",
+                "description": "必填。搜索模式（纯文本或正则表达式）。",
+            },
+            {
+                "type": "string",
+                "name": "path",
+                "description": "可选。要搜索的文件或目录路径，默认为当前目录。",
+            },
+            {
+                "type": "boolean",
+                "name": "is_regex",
+                "description": "可选。是否将 pattern 作为正则表达式。",
+            },
+            {
+                "type": "boolean",
+                "name": "case_insensitive",
+                "description": "可选。是否忽略大小写。",
+            },
+            {
+                "type": "string",
+                "name": "include_globs",
+                "description": "可选。JSON 数组字符串，只搜索匹配的文件名 glob 模式，例如 '[\"*.go\", \"*.py\"]'。",
+            },
+            {
+                "type": "string",
+                "name": "exclude_globs",
+                "description": "可选。JSON 数组字符串，排除匹配的文件名 glob 模式，例如 '[\"*.log\"]'。",
+            },
+            {
+                "type": "number",
+                "name": "max_matches",
+                "description": "可选。最大返回匹配数，默认 100。",
+            },
+        ],
+        desc="在当前已进入的 spaceship 节点上搜索文件内容；支持纯文本和正则，使用前需先调用 enternode",
+        handler=_make_grepfile_handler(runtime, config_getter),
+    )
+
 
 def _check_enabled(config_getter: Callable[[], dict]) -> tuple[bool, str | None]:
     """Check if spaceship is enabled in config.
@@ -420,3 +510,134 @@ def _make_writefile_handler(
             return f"Error: {exc}"
 
     return writefile_handler
+
+
+def _make_canceltask_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create canceltask tool handler."""
+
+    async def canceltask_handler(
+        event: object,
+        task_id: str,
+        node_id: str,
+        reason: str = "",
+    ) -> str:
+        _ = event
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            success = await runtime.cancel_task(
+                task_id=task_id,
+                node_id=node_id,
+                reason=reason,
+            )
+            if success:
+                return f"cancel request sent for task '{task_id}' on node '{node_id}'"
+            return f"Error: could not cancel task '{task_id}' — node '{node_id}' may be offline"
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return canceltask_handler
+
+
+def _make_editfile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create editfile tool handler."""
+    from .models import EditFileToolRequest
+
+    async def editfile_handler(
+        event: object,
+        path: str,
+        edits: str,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            parsed_edits = json.loads(edits)
+        except (json.JSONDecodeError, TypeError) as exc:
+            return f"Error: edits must be a valid JSON array: {exc}"
+
+        if not isinstance(parsed_edits, list) or not parsed_edits:
+            return "Error: edits must be a non-empty JSON array"
+
+        for i, edit in enumerate(parsed_edits):
+            if not isinstance(edit, dict):
+                return f"Error: edits[{i}] must be an object with 'search' and 'replace' keys"
+            if "search" not in edit or "replace" not in edit:
+                return f"Error: edits[{i}] must have 'search' and 'replace' keys"
+
+        try:
+            result = await runtime.edit_file(
+                request=EditFileToolRequest(
+                    path=path,
+                    edits=parsed_edits,
+                ),
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return editfile_handler
+
+
+def _make_grepfile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create grepfile tool handler."""
+    from .models import GrepToolRequest
+
+    async def grepfile_handler(
+        event: object,
+        pattern: str,
+        path: str = ".",
+        is_regex: bool = False,
+        case_insensitive: bool = False,
+        include_globs: str = "",
+        exclude_globs: str = "",
+        max_matches: int = 100,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        parsed_include = _parse_globs(include_globs)
+        parsed_exclude = _parse_globs(exclude_globs)
+
+        try:
+            result = await runtime.grep(
+                request=GrepToolRequest(
+                    pattern=pattern,
+                    path=path,
+                    is_regex=is_regex,
+                    case_insensitive=case_insensitive,
+                    include_globs=parsed_include,
+                    exclude_globs=parsed_exclude,
+                    max_matches=max_matches,
+                ),
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return grepfile_handler
+
+
+def _parse_globs(raw: str) -> list[str] | None:
+    """Parse a JSON array string of glob patterns, or return None."""
+    if not raw or not raw.strip():
+        return None
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if isinstance(parsed, list):
+        return [str(g) for g in parsed if g]
+    return None

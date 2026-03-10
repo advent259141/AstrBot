@@ -115,3 +115,35 @@ class TaskDispatcher:
                     stderr=str(payload.get("message", "task failed")),
                 )
             )
+
+    async def cancel(self, task_id: str, node_id: str, reason: str = "") -> bool:
+        """Send a task.cancel envelope and resolve the pending future."""
+        session = self.session_hub.get(node_id)
+        if session is None:
+            return False
+
+        envelope = Envelope(
+            type="task.cancel",
+            request_id=f"cancel_{uuid4().hex}",
+            session_id=session.session_id,
+            node_id=node_id,
+            seq=0,
+            ts=now_iso(),
+            payload={"task_id": task_id, "reason": reason},
+        )
+        await self.session_hub.send(node_id, envelope)
+
+        future = self._pending.get(task_id)
+        if future and not future.done():
+            future.set_result(
+                TaskResult(
+                    task_id=task_id,
+                    final_state="cancelled",
+                    stderr=f"cancelled: {reason}" if reason else "cancelled by user",
+                )
+            )
+        return True
+
+    def list_pending_tasks(self) -> list[str]:
+        """Return task IDs of currently pending (in-flight) tasks."""
+        return [tid for tid, f in self._pending.items() if not f.done()]

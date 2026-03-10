@@ -110,6 +110,27 @@ class WriteFileToolRequest:
     create_dirs: bool = True
 
 
+@dataclass(slots=True)
+class EditFileToolRequest:
+    """Request to edit a file on the currently entered node via search-and-replace."""
+
+    path: str
+    edits: list[dict[str, str]]
+
+
+@dataclass(slots=True)
+class GrepToolRequest:
+    """Request to search for text patterns in files on the currently entered node."""
+
+    pattern: str
+    path: str = "."
+    is_regex: bool = False
+    case_insensitive: bool = False
+    include_globs: list[str] | None = None
+    exclude_globs: list[str] | None = None
+    max_matches: int = 100
+
+
 class SessionConnection(Protocol):
     """Protocol for websocket connections that can send JSON."""
 
