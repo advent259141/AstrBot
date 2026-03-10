@@ -243,7 +243,7 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
         tools = provider.get_tools(ctx)
         result = {tool.name: tool for tool in tools}
         logger.info(
-            "[Computer] Subagent handoff: runtime=%s, tools=%d, session=%s",
+            "[Computer] sandbox_tool_binding target=subagent runtime=%s tools=%d session=%s",
             runtime,
             len(result),
             session_id,
