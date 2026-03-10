@@ -211,3 +211,8 @@ class SendMessageToUserTool(FunctionTool[AstrAgentContext]):
 
 
 SEND_MESSAGE_TO_USER_TOOL = SendMessageToUserTool()
+
+
+def get_all_tools() -> list[FunctionTool]:
+    """Return all send-message tools for registration."""
+    return [SEND_MESSAGE_TO_USER_TOOL]

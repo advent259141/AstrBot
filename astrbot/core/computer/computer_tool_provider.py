@@ -161,6 +161,73 @@ def _build_local_mode_prompt() -> str:
 class ComputerToolProvider:
     """Provides computer-use tools (local / sandbox) based on session context."""
 
+    @staticmethod
+    def get_all_tools() -> list[FunctionTool]:
+        """Return ALL computer-use tools across all runtimes for registration.
+
+        Creates **fresh instances** separate from the runtime caches so that
+        setting ``active=False`` on them does not affect runtime behaviour.
+        These registration-only instances let the WebUI display and assign
+        tools without injecting them into actual LLM requests.
+
+        At request time, ``get_tools(ctx)`` provides the real, active
+        instances filtered by runtime.
+        """
+        from astrbot.core.computer.tools import (
+            AnnotateExecutionTool,
+            BrowserBatchExecTool,
+            BrowserExecTool,
+            CreateSkillCandidateTool,
+            CreateSkillPayloadTool,
+            EvaluateSkillCandidateTool,
+            ExecuteShellTool,
+            FileDownloadTool,
+            FileUploadTool,
+            GetExecutionHistoryTool,
+            GetSkillPayloadTool,
+            ListSkillCandidatesTool,
+            ListSkillReleasesTool,
+            LocalPythonTool,
+            PromoteSkillCandidateTool,
+            PythonTool,
+            RollbackSkillReleaseTool,
+            RunBrowserSkillTool,
+            SyncSkillReleaseTool,
+        )
+
+        all_tools: list[FunctionTool] = [
+            ExecuteShellTool(),
+            PythonTool(),
+            FileUploadTool(),
+            FileDownloadTool(),
+            LocalPythonTool(),
+            BrowserExecTool(),
+            BrowserBatchExecTool(),
+            RunBrowserSkillTool(),
+            GetExecutionHistoryTool(),
+            AnnotateExecutionTool(),
+            CreateSkillPayloadTool(),
+            GetSkillPayloadTool(),
+            CreateSkillCandidateTool(),
+            ListSkillCandidatesTool(),
+            EvaluateSkillCandidateTool(),
+            PromoteSkillCandidateTool(),
+            ListSkillReleasesTool(),
+            RollbackSkillReleaseTool(),
+            SyncSkillReleaseTool(),
+        ]
+
+        # De-duplicate by name and mark inactive so they are visible
+        # in WebUI but never sent to the LLM via func_list.
+        seen: set[str] = set()
+        result: list[FunctionTool] = []
+        for tool in all_tools:
+            if tool.name not in seen:
+                tool.active = False
+                result.append(tool)
+                seen.add(tool.name)
+        return result
+
     def get_tools(self, ctx: ToolProviderContext) -> list[FunctionTool]:
         runtime = ctx.computer_use_runtime
         if runtime == "none":
@@ -239,3 +306,12 @@ class ComputerToolProvider:
         if existing_booter is not None:
             return getattr(existing_booter, "capabilities", None)
         return None
+
+
+def get_all_tools() -> list[FunctionTool]:
+    """Module-level entry point for ``FunctionToolManager.register_internal_tools()``.
+
+    Delegates to ``ComputerToolProvider.get_all_tools()`` which collects
+    tools from all runtimes (local, sandbox, browser, neo).
+    """
+    return ComputerToolProvider.get_all_tools()

@@ -63,6 +63,11 @@ class FunctionTool(ToolSchema, Generic[TContext]):
     Declare this tool as a background task. Background tasks return immediately
     with a task identifier while the real work continues asynchronously.
     """
+    source: str = "plugin"
+    """
+    Origin of this tool: 'plugin' (from star plugins), 'internal' (AstrBot built-in),
+    or 'mcp' (from MCP servers). Used by WebUI for display grouping.
+    """
 
     def __repr__(self) -> str:
         return f"FuncTool(name={self.name}, parameters={self.parameters}, description={self.description})"

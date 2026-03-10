@@ -132,3 +132,8 @@ async def retrieve_knowledge_base(
 
 
 KNOWLEDGE_BASE_QUERY_TOOL = KnowledgeBaseQueryTool()
+
+
+def get_all_tools() -> list[FunctionTool]:
+    """Return all knowledge-base tools for registration."""
+    return [KNOWLEDGE_BASE_QUERY_TOOL]
