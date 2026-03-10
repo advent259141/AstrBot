@@ -241,7 +241,14 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             session_id=session_id,
         )
         tools = provider.get_tools(ctx)
-        return {tool.name: tool for tool in tools}
+        result = {tool.name: tool for tool in tools}
+        logger.info(
+            "[Computer] Subagent handoff: runtime=%s, tools=%d, session=%s",
+            runtime,
+            len(result),
+            session_id,
+        )
+        return result
 
     @classmethod
     def _build_handoff_toolset(

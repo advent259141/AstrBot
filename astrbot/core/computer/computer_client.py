@@ -548,7 +548,11 @@ def get_sandbox_tools(session_id: str) -> list[FunctionTool]:
     booter = session_booter.get(session_id)
     if booter is None:
         return []
-    return booter.get_tools()
+    tools = booter.get_tools()
+    logger.debug(
+        "[Computer] get_sandbox_tools: session=%s, tools=%d", session_id, len(tools)
+    )
+    return tools
 
 
 def get_sandbox_capabilities(session_id: str) -> tuple[str, ...] | None:
@@ -563,7 +567,13 @@ def get_default_sandbox_tools(sandbox_cfg: dict) -> list[FunctionTool]:
     """Return conservative (pre-boot) tool list based on config. No instance needed."""
     booter_type = sandbox_cfg.get("booter", BOOTER_SHIPYARD_NEO)
     cls = _get_booter_class(booter_type)
-    return cls.get_default_tools() if cls else []
+    tools = cls.get_default_tools() if cls else []
+    logger.debug(
+        "[Computer] get_default_sandbox_tools: booter=%s, tools=%d",
+        booter_type,
+        len(tools),
+    )
+    return tools
 
 
 def get_sandbox_prompt_parts(sandbox_cfg: dict) -> list[str]:
