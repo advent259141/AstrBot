@@ -17,16 +17,14 @@ from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.agent.tool_executor import BaseFunctionToolExecutor
 from astrbot.core.astr_agent_context import AstrAgentContext
-from astrbot.core.astr_main_agent_resources import (
+from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+from astrbot.core.tool_provider import ToolProviderContext
+from astrbot.core.tools.prompts import (
     BACKGROUND_TASK_RESULT_WOKE_SYSTEM_PROMPT,
-    EXECUTE_SHELL_TOOL,
-    FILE_DOWNLOAD_TOOL,
-    FILE_UPLOAD_TOOL,
-    LOCAL_EXECUTE_SHELL_TOOL,
-    LOCAL_PYTHON_TOOL,
-    PYTHON_TOOL,
-    SEND_MESSAGE_TO_USER_TOOL,
+    BACKGROUND_TASK_WOKE_USER_PROMPT,
+    CONVERSATION_HISTORY_INJECT_PREFIX,
 )
+from astrbot.core.tools.send_message import SEND_MESSAGE_TO_USER_TOOL
 from astrbot.core.cron.events import CronMessageEvent
 from astrbot.core.message.components import Image
 from astrbot.core.message.message_event_result import (
@@ -178,19 +176,10 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
 
     @classmethod
     def _get_runtime_computer_tools(cls, runtime: str) -> dict[str, FunctionTool]:
-        if runtime == "sandbox":
-            return {
-                EXECUTE_SHELL_TOOL.name: EXECUTE_SHELL_TOOL,
-                PYTHON_TOOL.name: PYTHON_TOOL,
-                FILE_UPLOAD_TOOL.name: FILE_UPLOAD_TOOL,
-                FILE_DOWNLOAD_TOOL.name: FILE_DOWNLOAD_TOOL,
-            }
-        if runtime == "local":
-            return {
-                LOCAL_EXECUTE_SHELL_TOOL.name: LOCAL_EXECUTE_SHELL_TOOL,
-                LOCAL_PYTHON_TOOL.name: LOCAL_PYTHON_TOOL,
-            }
-        return {}
+        provider = ComputerToolProvider()
+        ctx = ToolProviderContext(computer_use_runtime=runtime)
+        tools = provider.get_tools(ctx)
+        return {tool.name: tool for tool in tools}
 
     @classmethod
     def _build_handoff_toolset(
@@ -495,23 +484,13 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             req.contexts = context
             context_dump = req._print_friendly_context()
             req.contexts = []
-            req.system_prompt += (
-                "\n\nBellow is you and user previous conversation history:\n"
-                f"{context_dump}"
-            )
+            req.system_prompt += CONVERSATION_HISTORY_INJECT_PREFIX + context_dump
 
         bg = json.dumps(extras["background_task_result"], ensure_ascii=False)
         req.system_prompt += BACKGROUND_TASK_RESULT_WOKE_SYSTEM_PROMPT.format(
             background_task_result=bg
         )
-        req.prompt = (
-            "Proceed according to your system instructions. "
-            "Output using same language as previous conversation. "
-            "If you need to deliver the result to the user immediately, "
-            "you MUST use `send_message_to_user` tool to send the message directly to the user, "
-            "otherwise the user will not see the result. "
-            "After completing your task, summarize and output your actions and results. "
-        )
+        req.prompt = BACKGROUND_TASK_WOKE_USER_PROMPT
         if not req.func_tool:
             req.func_tool = ToolSet()
         req.func_tool.add_tool(SEND_MESSAGE_TO_USER_TOOL)
