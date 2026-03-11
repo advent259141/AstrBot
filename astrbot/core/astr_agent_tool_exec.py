@@ -169,9 +169,60 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
 
             return
         else:
+            # Guard: reject sandbox tools whose capability is unavailable.
+            # Tools are always injected (for schema stability / prefix caching),
+            # but execution is blocked when the sandbox lacks the capability.
+            rejection = cls._check_sandbox_capability(tool, run_context)
+            if rejection is not None:
+                yield rejection
+                return
+
             async for r in cls._execute_local(tool, run_context, **tool_args):
                 yield r
             return
+
+    # Browser tool names that require the "browser" sandbox capability.
+    _BROWSER_TOOL_NAMES: frozenset[str] = frozenset({
+        "astrbot_execute_browser",
+        "astrbot_execute_browser_batch",
+        "astrbot_run_browser_skill",
+    })
+
+    @classmethod
+    def _check_sandbox_capability(
+        cls,
+        tool: FunctionTool,
+        run_context: ContextWrapper[AstrAgentContext],
+    ) -> mcp.types.CallToolResult | None:
+        """Return a rejection result if the tool requires a sandbox capability
+        that is not available, or None if the tool may proceed."""
+        if tool.name not in cls._BROWSER_TOOL_NAMES:
+            return None
+
+        from astrbot.core.computer.computer_client import get_sandbox_capabilities
+
+        session_id = run_context.context.event.unified_msg_origin
+        caps = get_sandbox_capabilities(session_id)
+
+        # Sandbox not yet booted — allow through (boot will happen on first
+        # shell/python call; browser tools will fail naturally if truly unavailable).
+        if caps is None:
+            return None
+
+        if "browser" not in caps:
+            msg = (
+                f"Tool '{tool.name}' requires browser capability, but the current "
+                f"sandbox profile does not include it (capabilities: {list(caps)}). "
+                "Please ask the administrator to switch to a sandbox profile with "
+                "browser support, or use shell/python tools instead."
+            )
+            logger.warning("[ToolExec] capability_rejected tool=%s caps=%s", tool.name, list(caps))
+            return mcp.types.CallToolResult(
+                content=[mcp.types.TextContent(type="text", text=msg)],
+                isError=True,
+            )
+
+        return None
 
     @classmethod
     def _get_runtime_computer_tools(

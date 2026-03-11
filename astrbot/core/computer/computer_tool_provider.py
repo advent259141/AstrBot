@@ -181,15 +181,17 @@ class ComputerToolProvider:
     def _sandbox_tools(self, ctx: ToolProviderContext) -> list[FunctionTool]:
         """Collect tools for sandbox mode.
 
-        Prefers the precise post-boot tool list from the running session's
-        booter instance (``get_sandbox_tools``).  When the sandbox has not
-        yet been booted, falls back to the conservative pre-boot default
-        declared by the booter class (``get_default_sandbox_tools``).
+        Always returns the full (pre-boot default) tool set declared by the
+        booter class, regardless of whether the sandbox is already booted.
+
+        This ensures the tool schema sent to the LLM is stable across the
+        entire conversation lifecycle (pre-boot and post-boot produce the
+        same set), enabling LLM prefix cache hits.  Tools whose underlying
+        capability is unavailable at runtime are rejected by the executor
+        with a descriptive error message instead of being omitted from the
+        schema.
         """
-        from astrbot.core.computer.computer_client import (
-            get_default_sandbox_tools,
-            get_sandbox_tools,
-        )
+        from astrbot.core.computer.computer_client import get_default_sandbox_tools
 
         booter_type = ctx.sandbox_cfg.get("booter", "shipyard_neo")
 
@@ -203,12 +205,7 @@ class ComputerToolProvider:
             os.environ["SHIPYARD_ENDPOINT"] = ep
             os.environ["SHIPYARD_ACCESS_TOKEN"] = at
 
-        # Prefer precise post-boot tools from the running session
-        booted_tools = get_sandbox_tools(ctx.session_id)
-        if booted_tools:
-            return booted_tools
-
-        # Pre-boot: conservative default from booter class
+        # Always return the full tool set for schema stability
         return get_default_sandbox_tools(ctx.sandbox_cfg)
 
     def _sandbox_prompt_addon(self, ctx: ToolProviderContext) -> str:

@@ -1074,6 +1074,10 @@ async def build_main_agent(
         asyncio.create_task(_handle_webchat(event, req, provider))
 
     if req.func_tool and req.func_tool.tools:
+        # Sort tools by name for deterministic serialization so that
+        # LLM provider prefix caching can match across requests.
+        req.func_tool.normalize()
+
         tool_prompt = (
             TOOL_CALL_PROMPT
             if config.tool_schema_mode == "full"

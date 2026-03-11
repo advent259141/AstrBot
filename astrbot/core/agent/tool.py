@@ -106,6 +106,15 @@ class ToolSet:
         """Remove a tool by its name."""
         self.tools = [tool for tool in self.tools if tool.name != name]
 
+    def normalize(self) -> None:
+        """Sort tools by name for deterministic serialization.
+
+        This ensures the serialized tool schema sent to the LLM is
+        identical across requests regardless of registration/injection
+        order, enabling LLM provider prefix cache hits.
+        """
+        self.tools.sort(key=lambda t: t.name)
+
     def get_tool(self, name: str) -> FunctionTool | None:
         """Get a tool by its name."""
         for tool in self.tools:
