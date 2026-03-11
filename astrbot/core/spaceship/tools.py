@@ -12,6 +12,7 @@ from .models import (
     CopyFileToolRequest,
     DeleteFileToolRequest,
     EditFileToolRequest,
+    ExecutePythonToolRequest,
     GrepToolRequest,
     ListDirToolRequest,
     MoveFileToolRequest,
@@ -291,6 +292,27 @@ class SpaceshipToolService:
                 "src": request.src,
                 "dst": request.dst,
                 "recursive": request.recursive,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        return result.stdout if result.final_state == "success" else result.stderr
+
+    async def execute_python(self, request: ExecutePythonToolRequest, requested_by: str) -> str:
+        """Execute Python code on the currently entered node."""
+        node_id = await self.require_selected_node_id(requested_by)
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="exec_python",
+            node_id=node_id,
+            requested_by=requested_by,
+            requested_via="tool",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=request.timeout_sec,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "code": request.code,
+                "cwd": request.cwd,
             },
         )
         result = await self.dispatcher.dispatch(task)

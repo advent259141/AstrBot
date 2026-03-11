@@ -329,6 +329,29 @@ def register_spaceship_tools(
         handler=_make_copyfile_handler(runtime, config_getter),
     )
 
+    # executepython tool
+    llm_tools.add_func(
+        name="executepython",
+        func_args=[
+            {
+                "type": "string",
+                "name": "code",
+                "description": "必填。要执行的 Python 代码。",
+            },
+            {
+                "type": "string",
+                "name": "cwd",
+                "description": "可选。工作目录。",
+            },
+            {
+                "type": "number",
+                "name": "timeout_sec",
+                "description": "可选。超时秒数，默认 60。",
+            },
+        ],
+        desc="在当前已进入的 spaceship 节点上执行 Python 代码；使用前需先调用 enternode。注意：该节点必须安装了 Python。",
+        handler=_make_executepython_handler(runtime, config_getter),
+    )
 
 def _check_enabled(config_getter: Callable[[], dict]) -> tuple[bool, str | None]:
     """Check if spaceship is enabled in config.
@@ -802,3 +825,35 @@ def _make_copyfile_handler(
             return f"Error: {exc}"
 
     return copyfile_handler
+
+
+def _make_executepython_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create executepython tool handler."""
+    from .models import ExecutePythonToolRequest
+
+    async def executepython_handler(
+        event: object,
+        code: str,
+        cwd: str = "",
+        timeout_sec: int = 60,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            result = await runtime.execute_python(
+                request=ExecutePythonToolRequest(
+                    code=code,
+                    cwd=cwd or None,
+                    timeout_sec=int(timeout_sec) if timeout_sec else 60,
+                ),
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return executepython_handler

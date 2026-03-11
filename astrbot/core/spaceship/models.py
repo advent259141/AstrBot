@@ -157,6 +157,15 @@ class CopyFileToolRequest:
     recursive: bool = False
 
 
+@dataclass(slots=True)
+class ExecutePythonToolRequest:
+    """Request to execute Python code on the currently entered node."""
+
+    code: str
+    cwd: str | None = None
+    timeout_sec: int = 60
+
+
 class SessionConnection(Protocol):
     """Protocol for websocket connections that can send JSON."""
 

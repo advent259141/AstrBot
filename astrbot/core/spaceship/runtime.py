@@ -13,6 +13,7 @@ from .models import (
     CopyFileToolRequest,
     DeleteFileToolRequest,
     EditFileToolRequest,
+    ExecutePythonToolRequest,
     GrepToolRequest,
     ListDirToolRequest,
     MoveFileToolRequest,
@@ -208,5 +209,11 @@ class SpaceshipRuntime:
     async def copy_file(self, request: CopyFileToolRequest, requested_by: str) -> str:
         """Copy a file or directory on the currently entered node (tool layer)."""
         return await self.tool_service.copy_file(
+            request=request, requested_by=requested_by
+        )
+
+    async def execute_python(self, request: ExecutePythonToolRequest, requested_by: str) -> str:
+        """Execute Python code on the currently entered node (tool layer)."""
+        return await self.tool_service.execute_python(
             request=request, requested_by=requested_by
         )
