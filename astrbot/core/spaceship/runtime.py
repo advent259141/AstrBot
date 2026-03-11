@@ -10,9 +10,12 @@ from .components import SpaceshipNodeBooter
 from .dispatcher import TaskDispatcher
 from .gateway import SpaceshipGatewayService
 from .models import (
+    CopyFileToolRequest,
+    DeleteFileToolRequest,
     EditFileToolRequest,
     GrepToolRequest,
     ListDirToolRequest,
+    MoveFileToolRequest,
     ReadFileToolRequest,
     SessionConnection,
     ShellToolRequest,
@@ -187,5 +190,23 @@ class SpaceshipRuntime:
     async def grep(self, request: GrepToolRequest, requested_by: str) -> str:
         """Search for text patterns in files on the currently entered node (tool layer)."""
         return await self.tool_service.grep(
+            request=request, requested_by=requested_by
+        )
+
+    async def delete_file(self, request: DeleteFileToolRequest, requested_by: str) -> str:
+        """Delete a file or directory on the currently entered node (tool layer)."""
+        return await self.tool_service.delete_file(
+            request=request, requested_by=requested_by
+        )
+
+    async def move_file(self, request: MoveFileToolRequest, requested_by: str) -> str:
+        """Move or rename a file/directory on the currently entered node (tool layer)."""
+        return await self.tool_service.move_file(
+            request=request, requested_by=requested_by
+        )
+
+    async def copy_file(self, request: CopyFileToolRequest, requested_by: str) -> str:
+        """Copy a file or directory on the currently entered node (tool layer)."""
+        return await self.tool_service.copy_file(
             request=request, requested_by=requested_by
         )

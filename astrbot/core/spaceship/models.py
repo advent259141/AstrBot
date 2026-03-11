@@ -131,6 +131,32 @@ class GrepToolRequest:
     max_matches: int = 100
 
 
+@dataclass(slots=True)
+class DeleteFileToolRequest:
+    """Request to delete a file or directory on the currently entered node."""
+
+    path: str
+    recursive: bool = False
+
+
+@dataclass(slots=True)
+class MoveFileToolRequest:
+    """Request to move/rename a file or directory on the currently entered node."""
+
+    src: str
+    dst: str
+    overwrite: bool = False
+
+
+@dataclass(slots=True)
+class CopyFileToolRequest:
+    """Request to copy a file or directory on the currently entered node."""
+
+    src: str
+    dst: str
+    recursive: bool = False
+
+
 class SessionConnection(Protocol):
     """Protocol for websocket connections that can send JSON."""
 

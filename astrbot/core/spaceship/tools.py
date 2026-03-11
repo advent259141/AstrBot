@@ -9,9 +9,12 @@ from uuid import uuid4
 from astrbot.core import sp
 
 from .models import (
+    CopyFileToolRequest,
+    DeleteFileToolRequest,
     EditFileToolRequest,
     GrepToolRequest,
     ListDirToolRequest,
+    MoveFileToolRequest,
     ReadFileToolRequest,
     ShellToolRequest,
     TaskSpec,
@@ -223,6 +226,71 @@ class SpaceshipToolService:
                 "include_globs": request.include_globs or [],
                 "exclude_globs": request.exclude_globs or [],
                 "max_matches": request.max_matches,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        return result.stdout if result.final_state == "success" else result.stderr
+
+    async def delete_file(self, request: DeleteFileToolRequest, requested_by: str) -> str:
+        """Delete a file or directory on the currently entered node."""
+        node_id = await self.require_selected_node_id(requested_by)
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="delete_file",
+            node_id=node_id,
+            requested_by=requested_by,
+            requested_via="tool",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=30,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "path": request.path,
+                "recursive": request.recursive,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        return result.stdout if result.final_state == "success" else result.stderr
+
+    async def move_file(self, request: MoveFileToolRequest, requested_by: str) -> str:
+        """Move or rename a file/directory on the currently entered node."""
+        node_id = await self.require_selected_node_id(requested_by)
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="move_file",
+            node_id=node_id,
+            requested_by=requested_by,
+            requested_via="tool",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=30,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "src": request.src,
+                "dst": request.dst,
+                "overwrite": request.overwrite,
+            },
+        )
+        result = await self.dispatcher.dispatch(task)
+        return result.stdout if result.final_state == "success" else result.stderr
+
+    async def copy_file(self, request: CopyFileToolRequest, requested_by: str) -> str:
+        """Copy a file or directory on the currently entered node."""
+        node_id = await self.require_selected_node_id(requested_by)
+        task = TaskSpec(
+            task_id=f"task_{uuid4().hex}",
+            task_type="copy_file",
+            node_id=node_id,
+            requested_by=requested_by,
+            requested_via="tool",
+            tool_call_id=f"tool_{uuid4().hex}",
+            timeout_sec=30,
+            max_output_bytes=65536,
+            risk_level="normal",
+            args={
+                "src": request.src,
+                "dst": request.dst,
+                "recursive": request.recursive,
             },
         )
         result = await self.dispatcher.dispatch(task)

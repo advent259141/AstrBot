@@ -262,6 +262,73 @@ def register_spaceship_tools(
         handler=_make_grepfile_handler(runtime, config_getter),
     )
 
+    # deletefile tool
+    llm_tools.add_func(
+        name="deletefile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "path",
+                "description": "必填。要删除的文件或目录路径。",
+            },
+            {
+                "type": "boolean",
+                "name": "recursive",
+                "description": "可选。是否递归删除目录（类似 rm -rf）。",
+            },
+        ],
+        desc="删除当前已进入的 spaceship 节点上的文件或目录；使用前需先调用 enternode",
+        handler=_make_deletefile_handler(runtime, config_getter),
+    )
+
+    # movefile tool
+    llm_tools.add_func(
+        name="movefile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "src",
+                "description": "必填。源文件或目录路径。",
+            },
+            {
+                "type": "string",
+                "name": "dst",
+                "description": "必填。目标路径。",
+            },
+            {
+                "type": "boolean",
+                "name": "overwrite",
+                "description": "可选。目标已存在时是否覆盖。",
+            },
+        ],
+        desc="移动或重命名当前已进入的 spaceship 节点上的文件或目录；使用前需先调用 enternode",
+        handler=_make_movefile_handler(runtime, config_getter),
+    )
+
+    # copyfile tool
+    llm_tools.add_func(
+        name="copyfile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "src",
+                "description": "必填。源文件或目录路径。",
+            },
+            {
+                "type": "string",
+                "name": "dst",
+                "description": "必填。目标路径。",
+            },
+            {
+                "type": "boolean",
+                "name": "recursive",
+                "description": "可选。是否递归复制目录。",
+            },
+        ],
+        desc="复制当前已进入的 spaceship 节点上的文件或目录；使用前需先调用 enternode",
+        handler=_make_copyfile_handler(runtime, config_getter),
+    )
+
 
 def _check_enabled(config_getter: Callable[[], dict]) -> tuple[bool, str | None]:
     """Check if spaceship is enabled in config.
@@ -641,3 +708,97 @@ def _parse_globs(raw: str) -> list[str] | None:
     if isinstance(parsed, list):
         return [str(g) for g in parsed if g]
     return None
+
+
+def _make_deletefile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create deletefile tool handler."""
+    from .models import DeleteFileToolRequest
+
+    async def deletefile_handler(
+        event: object,
+        path: str,
+        recursive: bool = False,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            result = await runtime.delete_file(
+                request=DeleteFileToolRequest(
+                    path=path,
+                    recursive=recursive,
+                ),
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return deletefile_handler
+
+
+def _make_movefile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create movefile tool handler."""
+    from .models import MoveFileToolRequest
+
+    async def movefile_handler(
+        event: object,
+        src: str,
+        dst: str,
+        overwrite: bool = False,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            result = await runtime.move_file(
+                request=MoveFileToolRequest(
+                    src=src,
+                    dst=dst,
+                    overwrite=overwrite,
+                ),
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return movefile_handler
+
+
+def _make_copyfile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create copyfile tool handler."""
+    from .models import CopyFileToolRequest
+
+    async def copyfile_handler(
+        event: object,
+        src: str,
+        dst: str,
+        recursive: bool = False,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            result = await runtime.copy_file(
+                request=CopyFileToolRequest(
+                    src=src,
+                    dst=dst,
+                    recursive=recursive,
+                ),
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return copyfile_handler
