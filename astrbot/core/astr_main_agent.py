@@ -9,7 +9,7 @@ import zoneinfo
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 
-from astrbot.core import logger
+from astrbot.core import logger, sp
 from astrbot.core.agent.handoff import HandoffTool
 from astrbot.core.agent.mcp_client import MCPTool
 from astrbot.core.agent.message import TextPart
@@ -1033,13 +1033,18 @@ async def build_main_agent(
             sandbox_cfg=config.sandbox_cfg,
             session_id=req.session_id or "",
         )
+        # Respect WebUI tool enable/disable settings
+        _inactivated: set[str] = set(
+            sp.get("inactivated_llm_tools", [], scope="global", scope_id="global")
+        )
         for _tp in config.tool_providers:
             _tp_tools = _tp.get_tools(_provider_ctx)
             if _tp_tools:
                 if req.func_tool is None:
                     req.func_tool = ToolSet()
                 for _tool in _tp_tools:
-                    req.func_tool.add_tool(_tool)
+                    if _tool.name not in _inactivated:
+                        req.func_tool.add_tool(_tool)
             _tp_addon = _tp.get_system_prompt_addon(_provider_ctx)
             if _tp_addon:
                 req.system_prompt = f"{req.system_prompt or ''}{_tp_addon}"
