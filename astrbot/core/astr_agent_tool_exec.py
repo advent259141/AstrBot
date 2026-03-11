@@ -17,8 +17,7 @@ from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.agent.tool_executor import BaseFunctionToolExecutor
 from astrbot.core.astr_agent_context import AstrAgentContext
-from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
-from astrbot.core.tool_provider import ToolProviderContext
+
 from astrbot.core.tools.prompts import (
     BACKGROUND_TASK_RESULT_WOKE_SYSTEM_PROMPT,
     BACKGROUND_TASK_WOKE_USER_PROMPT,
@@ -176,6 +175,9 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
 
     @classmethod
     def _get_runtime_computer_tools(cls, runtime: str) -> dict[str, FunctionTool]:
+        from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+        from astrbot.core.tool_provider import ToolProviderContext
+
         provider = ComputerToolProvider()
         ctx = ToolProviderContext(computer_use_runtime=runtime)
         tools = provider.get_tools(ctx)
@@ -469,11 +471,14 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             message_type=session.message_type,
         )
         cron_event.role = event.role
+        from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+
         config = MainAgentBuildConfig(
             tool_call_timeout=3600,
             streaming_response=ctx.get_config()
             .get("provider_settings", {})
             .get("stream", False),
+            tool_providers=[ComputerToolProvider()],
         )
 
         req = ProviderRequest()

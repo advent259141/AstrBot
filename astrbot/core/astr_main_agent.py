@@ -18,9 +18,7 @@ from astrbot.core.astr_agent_context import AgentContextWrapper, AstrAgentContex
 from astrbot.core.astr_agent_hooks import MAIN_AGENT_HOOKS
 from astrbot.core.astr_agent_run_util import AgentRunner
 from astrbot.core.astr_agent_tool_exec import FunctionToolExecutor
-from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
-from astrbot.core.cron.cron_tool_provider import CronToolProvider
-from astrbot.core.tool_provider import ToolProviderContext
+from astrbot.core.tool_provider import ToolProvider, ToolProviderContext
 from astrbot.core.tools.kb_query import (
     KNOWLEDGE_BASE_QUERY_TOOL,
     retrieve_knowledge_base,
@@ -114,6 +112,9 @@ class MainAgentBuildConfig:
     computer_use_runtime: str = "local"
     """The runtime for agent computer use: none, local, or sandbox."""
     sandbox_cfg: dict = field(default_factory=dict)
+    tool_providers: list[ToolProvider] = field(default_factory=list)
+    """Decoupled tool providers injected by the caller.
+    Each provider is queried for tools and system-prompt addons at build time."""
     add_cron_tools: bool = True
     """This will add cron job management tools to the main agent for proactive cron job execution."""
     provider_settings: dict = field(default_factory=dict)
@@ -798,14 +799,7 @@ def _apply_llm_safety_mode(config: MainAgentBuildConfig, req: ProviderRequest) -
 # See astrbot.core.computer.computer_tool_provider for details.
 
 
-def _proactive_cron_job_tools(req: ProviderRequest) -> None:
-    _cron_provider = CronToolProvider()
-    _cron_tools = _cron_provider.get_tools(ToolProviderContext())
-    if _cron_tools:
-        if req.func_tool is None:
-            req.func_tool = ToolSet()
-        for _tool in _cron_tools:
-            req.func_tool.add_tool(_tool)
+
 
 
 def _get_compress_provider(
@@ -1032,31 +1026,29 @@ async def build_main_agent(
     if config.llm_safety_mode:
         _apply_llm_safety_mode(config, req)
 
-    # Computer-use tools (local / sandbox) via decoupled ToolProvider
-    _computer_provider = ComputerToolProvider()
-    _computer_ctx = ToolProviderContext(
-        computer_use_runtime=config.computer_use_runtime,
-        sandbox_cfg=config.sandbox_cfg,
-        session_id=req.session_id or "",
-    )
-    _computer_tools = _computer_provider.get_tools(_computer_ctx)
-    if _computer_tools:
-        if req.func_tool is None:
-            req.func_tool = ToolSet()
-        for _tool in _computer_tools:
-            req.func_tool.add_tool(_tool)
-        _prompt_addon = _computer_provider.get_system_prompt_addon(_computer_ctx)
-        if _prompt_addon:
-            req.system_prompt = f"{req.system_prompt or ''}{_prompt_addon}"
+    # Decoupled tool providers — each provider injects its tools and prompt addons
+    if config.tool_providers:
+        _provider_ctx = ToolProviderContext(
+            computer_use_runtime=config.computer_use_runtime,
+            sandbox_cfg=config.sandbox_cfg,
+            session_id=req.session_id or "",
+        )
+        for _tp in config.tool_providers:
+            _tp_tools = _tp.get_tools(_provider_ctx)
+            if _tp_tools:
+                if req.func_tool is None:
+                    req.func_tool = ToolSet()
+                for _tool in _tp_tools:
+                    req.func_tool.add_tool(_tool)
+            _tp_addon = _tp.get_system_prompt_addon(_provider_ctx)
+            if _tp_addon:
+                req.system_prompt = f"{req.system_prompt or ''}{_tp_addon}"
 
     agent_runner = AgentRunner()
     astr_agent_ctx = AstrAgentContext(
         context=plugin_context,
         event=event,
     )
-
-    if config.add_cron_tools:
-        _proactive_cron_job_tools(req)
 
     if event.platform_meta.support_proactive_message:
         if req.func_tool is None:
