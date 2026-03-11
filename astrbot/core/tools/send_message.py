@@ -89,7 +89,9 @@ class SendMessageToUserTool(FunctionTool[AstrAgentContext]):
                 context.context.event.unified_msg_origin,
             )
             # Use shell to check if the file exists in sandbox
-            result = await sb.shell.exec(f"test -f {path} && echo '_&exists_'")
+            import shlex
+
+            result = await sb.shell.exec(f"test -f {shlex.quote(path)} && echo '_&exists_'")
             if "_&exists_" in json.dumps(result):
                 # Download the file from sandbox
                 name = os.path.basename(path)

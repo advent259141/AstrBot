@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import functools
 import os
 import shlex
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from astrbot.api import logger
+
+if TYPE_CHECKING:
+    from astrbot.core.agent.tool import FunctionTool
 
 from ..olayer import (
     BrowserComponent,
@@ -511,3 +515,80 @@ class ShipyardNeoBooter(ComputerBooter):
         except Exception as e:
             logger.error(f"Error checking Shipyard Neo sandbox availability: {e}")
             return False
+
+    # ── Tool / prompt self-description ────────────────────────────
+
+    @classmethod
+    @functools.cache
+    def _base_tools(cls) -> tuple[FunctionTool, ...]:
+        """4 base + 11 Neo lifecycle = 15 tools (all Neo profiles)."""
+        from astrbot.core.computer.tools import (
+            AnnotateExecutionTool,
+            CreateSkillCandidateTool,
+            CreateSkillPayloadTool,
+            EvaluateSkillCandidateTool,
+            ExecuteShellTool,
+            FileDownloadTool,
+            FileUploadTool,
+            GetExecutionHistoryTool,
+            GetSkillPayloadTool,
+            ListSkillCandidatesTool,
+            ListSkillReleasesTool,
+            PromoteSkillCandidateTool,
+            PythonTool,
+            RollbackSkillReleaseTool,
+            SyncSkillReleaseTool,
+        )
+
+        return (
+            ExecuteShellTool(),
+            PythonTool(),
+            FileUploadTool(),
+            FileDownloadTool(),
+            GetExecutionHistoryTool(),
+            AnnotateExecutionTool(),
+            CreateSkillPayloadTool(),
+            GetSkillPayloadTool(),
+            CreateSkillCandidateTool(),
+            ListSkillCandidatesTool(),
+            EvaluateSkillCandidateTool(),
+            PromoteSkillCandidateTool(),
+            ListSkillReleasesTool(),
+            RollbackSkillReleaseTool(),
+            SyncSkillReleaseTool(),
+        )
+
+    @classmethod
+    @functools.cache
+    def _browser_tools(cls) -> tuple[FunctionTool, ...]:
+        from astrbot.core.computer.tools import (
+            BrowserBatchExecTool,
+            BrowserExecTool,
+            RunBrowserSkillTool,
+        )
+
+        return (BrowserExecTool(), BrowserBatchExecTool(), RunBrowserSkillTool())
+
+    @classmethod
+    def get_default_tools(cls) -> list[FunctionTool]:
+        """Pre-boot: conservative full list (including browser)."""
+        return list(cls._base_tools()) + list(cls._browser_tools())
+
+    def get_tools(self) -> list[FunctionTool]:
+        """Post-boot: capability-filtered list."""
+        caps = self.capabilities
+        if caps is None:
+            return self.__class__.get_default_tools()
+        tools = list(self._base_tools())
+        if "browser" in caps:
+            tools.extend(self._browser_tools())
+        return tools
+
+    @classmethod
+    def get_system_prompt_parts(cls) -> list[str]:
+        from astrbot.core.computer.prompts import (
+            NEO_FILE_PATH_PROMPT,
+            NEO_SKILL_LIFECYCLE_PROMPT,
+        )
+
+        return [NEO_FILE_PATH_PROMPT, NEO_SKILL_LIFECYCLE_PROMPT]

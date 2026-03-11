@@ -174,12 +174,21 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             return
 
     @classmethod
-    def _get_runtime_computer_tools(cls, runtime: str) -> dict[str, FunctionTool]:
+    def _get_runtime_computer_tools(
+        cls,
+        runtime: str,
+        sandbox_cfg: dict | None = None,
+        session_id: str = "",
+    ) -> dict[str, FunctionTool]:
         from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
         from astrbot.core.tool_provider import ToolProviderContext
 
         provider = ComputerToolProvider()
-        ctx = ToolProviderContext(computer_use_runtime=runtime)
+        ctx = ToolProviderContext(
+            computer_use_runtime=runtime,
+            sandbox_cfg=sandbox_cfg,
+            session_id=session_id,
+        )
         tools = provider.get_tools(ctx)
         return {tool.name: tool for tool in tools}
 
@@ -194,7 +203,12 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
         cfg = ctx.get_config(umo=event.unified_msg_origin)
         provider_settings = cfg.get("provider_settings", {})
         runtime = str(provider_settings.get("computer_use_runtime", "local"))
-        runtime_computer_tools = cls._get_runtime_computer_tools(runtime)
+        sandbox_cfg = provider_settings.get("sandbox", {})
+        runtime_computer_tools = cls._get_runtime_computer_tools(
+            runtime,
+            sandbox_cfg=sandbox_cfg,
+            session_id=event.unified_msg_origin,
+        )
 
         # Keep persona semantics aligned with the main agent: tools=None means
         # "all tools", including runtime computer-use tools.

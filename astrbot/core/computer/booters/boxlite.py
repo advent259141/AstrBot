@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import asyncio
+import functools
 import random
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import boxlite
@@ -9,6 +12,9 @@ from shipyard.python import PythonComponent as ShipyardPythonComponent
 from shipyard.shell import ShellComponent as ShipyardShellComponent
 
 from astrbot.api import logger
+
+if TYPE_CHECKING:
+    from astrbot.core.agent.tool import FunctionTool
 
 from ..olayer import FileSystemComponent, PythonComponent, ShellComponent
 from .base import ComputerBooter
@@ -188,3 +194,24 @@ class BoxliteBooter(ComputerBooter):
     async def upload_file(self, path: str, file_name: str) -> dict:
         """Upload file to sandbox"""
         return await self.mocked.upload_file(path, file_name)
+
+    @classmethod
+    @functools.cache
+    def _default_tools(cls) -> tuple[FunctionTool, ...]:
+        from astrbot.core.computer.tools import (
+            ExecuteShellTool,
+            FileDownloadTool,
+            FileUploadTool,
+            PythonTool,
+        )
+
+        return (
+            ExecuteShellTool(),
+            PythonTool(),
+            FileUploadTool(),
+            FileDownloadTool(),
+        )
+
+    @classmethod
+    def get_default_tools(cls) -> list[FunctionTool]:
+        return list(cls._default_tools())

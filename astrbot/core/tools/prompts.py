@@ -132,7 +132,7 @@ FILE_EXTRACT_CONTEXT_TEMPLATE = (
 )
 
 CONVERSATION_HISTORY_INJECT_PREFIX = (
-    "\n\nBellow is you and user previous conversation history:\n"
+    "\n\nBelow is your and the user's previous conversation history:\n"
 )
 
 BACKGROUND_TASK_WOKE_USER_PROMPT = (

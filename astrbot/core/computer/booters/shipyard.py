@@ -1,12 +1,41 @@
+from __future__ import annotations
+
+import functools
+from typing import TYPE_CHECKING
+
 from shipyard import ShipyardClient, Spec
 
 from astrbot.api import logger
+
+if TYPE_CHECKING:
+    from astrbot.core.agent.tool import FunctionTool
 
 from ..olayer import FileSystemComponent, PythonComponent, ShellComponent
 from .base import ComputerBooter
 
 
 class ShipyardBooter(ComputerBooter):
+    @classmethod
+    @functools.cache
+    def _default_tools(cls) -> tuple[FunctionTool, ...]:
+        from astrbot.core.computer.tools import (
+            ExecuteShellTool,
+            FileDownloadTool,
+            FileUploadTool,
+            PythonTool,
+        )
+
+        return (
+            ExecuteShellTool(),
+            PythonTool(),
+            FileUploadTool(),
+            FileDownloadTool(),
+        )
+
+    @classmethod
+    def get_default_tools(cls) -> list[FunctionTool]:
+        return list(cls._default_tools())
+
     def __init__(
         self,
         endpoint_url: str,

@@ -1033,7 +1033,9 @@ async def build_main_agent(
             sandbox_cfg=config.sandbox_cfg,
             session_id=req.session_id or "",
         )
-        # Respect WebUI tool enable/disable settings
+        # Respect WebUI tool enable/disable settings.
+        # Internal tools (source='internal') bypass this check — they are
+        # not user-togglable in the WebUI, so legacy entries must not block them.
         _inactivated: set[str] = set(
             sp.get("inactivated_llm_tools", [], scope="global", scope_id="global")
         )
@@ -1043,7 +1045,8 @@ async def build_main_agent(
                 if req.func_tool is None:
                     req.func_tool = ToolSet()
                 for _tool in _tp_tools:
-                    if _tool.name not in _inactivated:
+                    is_internal = getattr(_tool, "source", "") == "internal"
+                    if is_internal or _tool.name not in _inactivated:
                         req.func_tool.add_tool(_tool)
             _tp_addon = _tp.get_system_prompt_addon(_provider_ctx)
             if _tp_addon:
