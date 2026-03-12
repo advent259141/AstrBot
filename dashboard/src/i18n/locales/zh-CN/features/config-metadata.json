@@ -3,7 +3,7 @@
     "name": "AI 配置",
     "agent_runner": {
       "description": "Agent 执行方式",
-      "hint": "选择 AI 对话的执行器,默认为 AstrBot 内置 Agent 执行器,可使用 AstrBot 内的知识库、人格、工具调用功能。如果不打算接入 Dify、Coze、DeerFlow 等第三方 Agent 执行器,不需要修改此节。",
+      "hint": "选择 AI 对话的执行器,默认为 AstrBot 内置 Agent 执行器,可使用 AstrBot 内的知识库、人格、工具调用功能。如果不打算接入 Dify、Coze、DeerFlow、MaiBot 等第三方 Agent 执行器,不需要修改此节。",
       "provider_settings": {
         "enable": {
           "description": "启用",
@@ -16,7 +16,8 @@
             "Dify",
             "Coze",
             "阿里云百炼应用",
-            "DeerFlow"
+            "DeerFlow",
+            "MaiBot"
           ]
         },
         "coze_agent_runner_provider_id": {
@@ -30,6 +31,9 @@
         },
         "deerflow_agent_runner_provider_id": {
           "description": "DeerFlow Agent 执行器提供商 ID"
+        },
+        "maibot_agent_runner_provider_id": {
+          "description": "MaiBot Agent 执行器提供商 ID"
         }
       }
     },
@@ -1510,6 +1514,18 @@
       "deerflow_recursion_limit": {
         "description": "递归深度上限",
         "hint": "对应 LangGraph recursion_limit。"
+      },
+      "maibot_ws_url": {
+        "description": "MaiBot WebSocket 地址",
+        "hint": "MaiBot API-Server 的 WebSocket 地址，默认为 ws://127.0.0.1:8090/ws"
+      },
+      "maibot_api_key": {
+        "description": "MaiBot API Key",
+        "hint": "MaiBot API-Server 的鉴权密钥，需要与 MaiBot 配置中的 api_server_allowed_api_keys 一致。"
+      },
+      "maibot_platform": {
+        "description": "MaiBot 平台标识",
+        "hint": "发送给 MaiBot 的平台标识，默认为 astrbot。"
       },
       "auto_save_history": {
         "description": "由 Coze 管理对话记录",
