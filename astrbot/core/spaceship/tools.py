@@ -18,6 +18,7 @@ from .models import (
     MoveFileToolRequest,
     ReadFileToolRequest,
     ShellToolRequest,
+    TaskResult,
     TaskSpec,
     WriteFileToolRequest,
 )
@@ -27,6 +28,37 @@ if TYPE_CHECKING:
     from .runtime import SpaceshipRuntime
 
 _SELECTED_NODE_KEY = "spaceship_selected_node_id"
+
+
+def _format_result(result: TaskResult) -> str:
+    """Format a TaskResult into a human-readable string for the LLM.
+
+    On success, returns stdout.
+    On failure, returns a structured message including the failure reason,
+    any partial stdout collected before the failure, and stderr.
+    """
+    if result.final_state == "success":
+        return result.stdout
+
+    parts: list[str] = []
+
+    # Header with failure reason
+    if result.timed_out:
+        parts.append("[TIMED OUT] command exceeded timeout")
+    elif result.final_state == "cancelled":
+        parts.append("[CANCELLED] task was cancelled")
+    else:
+        parts.append(f"[FAILED] exit_code={result.exit_code}")
+
+    # Include any partial stdout (e.g. output before timeout)
+    if result.stdout:
+        parts.append(f"stdout:\n{result.stdout}")
+
+    # Include stderr
+    if result.stderr:
+        parts.append(f"stderr:\n{result.stderr}")
+
+    return "\n".join(parts)
 
 
 @dataclass(slots=True)
@@ -116,7 +148,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def list_dir(self, request: ListDirToolRequest, requested_by: str) -> str:
         """List directory contents on the currently entered node."""
@@ -139,7 +171,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def read_file(self, request: ReadFileToolRequest, requested_by: str) -> str:
         """Read a file from the currently entered node."""
@@ -160,7 +192,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def write_file(self, request: WriteFileToolRequest, requested_by: str) -> str:
         """Write a file on the currently entered node."""
@@ -183,7 +215,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def edit_file(self, request: EditFileToolRequest, requested_by: str) -> str:
         """Edit a file on the currently entered node via search-and-replace."""
@@ -204,7 +236,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def grep(self, request: GrepToolRequest, requested_by: str) -> str:
         """Search for text patterns in files on the currently entered node."""
@@ -230,7 +262,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def delete_file(self, request: DeleteFileToolRequest, requested_by: str) -> str:
         """Delete a file or directory on the currently entered node."""
@@ -251,7 +283,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def move_file(self, request: MoveFileToolRequest, requested_by: str) -> str:
         """Move or rename a file/directory on the currently entered node."""
@@ -273,7 +305,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def copy_file(self, request: CopyFileToolRequest, requested_by: str) -> str:
         """Copy a file or directory on the currently entered node."""
@@ -295,7 +327,7 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)
 
     async def execute_python(self, request: ExecutePythonToolRequest, requested_by: str) -> str:
         """Execute Python code on the currently entered node."""
@@ -316,4 +348,4 @@ class SpaceshipToolService:
             },
         )
         result = await self.dispatcher.dispatch(task)
-        return result.stdout if result.final_state == "success" else result.stderr
+        return _format_result(result)

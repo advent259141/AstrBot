@@ -430,7 +430,7 @@ def _make_getnodeinfo_handler(
         node = runtime.get_node_info(node_id)
         if node is None:
             return f"Error: node '{node_id}' not found."
-        return json.dumps(node, ensure_ascii=False)
+        return json.dumps(node, ensure_ascii=False, default=str)
 
     return getnodeinfo_handler
 
