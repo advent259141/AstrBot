@@ -204,6 +204,8 @@ class AstrBotDashboard:
             "/api/platform/webhook",
             "/api/stat/start-time",
             "/api/backup/download",  # 备份下载使用 URL 参数传递 token
+            "/api/spaceship/files",  # 文件传输使用一次性 token 认证
+            "/api/spaceship/ws",     # WebSocket 握手使用自有认证
         ]
         if any(request.path.startswith(prefix) for prefix in allowed_endpoints):
             return None

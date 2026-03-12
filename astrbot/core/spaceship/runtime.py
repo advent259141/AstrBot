@@ -224,18 +224,18 @@ class SpaceshipRuntime:
         )
 
     async def upload_file(
-        self, request: UploadFileToolRequest, requested_by: str, base_url: str
+        self, request: UploadFileToolRequest, requested_by: str,
     ) -> str:
         """Upload a file from AstrBot to the remote node (tool layer)."""
         return await self.tool_service.upload_file(
-            request=request, requested_by=requested_by, base_url=base_url
+            request=request, requested_by=requested_by,
         )
 
     async def download_file(
-        self, request: DownloadFileToolRequest, requested_by: str, base_url: str
+        self, request: DownloadFileToolRequest, requested_by: str,
     ) -> str:
         """Download a file from the remote node to AstrBot (tool layer)."""
         return await self.tool_service.download_file(
-            request=request, requested_by=requested_by, base_url=base_url
+            request=request, requested_by=requested_by,
         )
 

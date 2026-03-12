@@ -353,14 +353,13 @@ class SpaceshipToolService:
         return _format_result(result)
 
     async def upload_file(
-        self, request: UploadFileToolRequest, requested_by: str, base_url: str
+        self, request: UploadFileToolRequest, requested_by: str,
     ) -> str:
         """Upload a file from AstrBot to the remote node via HTTP."""
         node_id = await self.require_selected_node_id(requested_by)
         token = self.runtime.file_transfer.create_download_ticket(
             file_path=request.local_path, node_id=node_id
         )
-        download_url = f"{base_url}/api/spaceship/files/{token}"
         task = TaskSpec(
             task_id=f"task_{uuid4().hex}",
             task_type="fetch_file",
@@ -372,7 +371,7 @@ class SpaceshipToolService:
             max_output_bytes=1024,
             risk_level="normal",
             args={
-                "download_url": download_url,
+                "token": token,
                 "save_path": request.remote_path,
             },
         )
@@ -380,14 +379,13 @@ class SpaceshipToolService:
         return _format_result(result)
 
     async def download_file(
-        self, request: DownloadFileToolRequest, requested_by: str, base_url: str
+        self, request: DownloadFileToolRequest, requested_by: str,
     ) -> str:
         """Download a file from the remote node to AstrBot via HTTP."""
         node_id = await self.require_selected_node_id(requested_by)
         token = self.runtime.file_transfer.create_upload_ticket(
             save_path=request.local_path, node_id=node_id
         )
-        upload_url = f"{base_url}/api/spaceship/files/upload"
         task = TaskSpec(
             task_id=f"task_{uuid4().hex}",
             task_type="push_file",
@@ -399,9 +397,8 @@ class SpaceshipToolService:
             max_output_bytes=1024,
             risk_level="normal",
             args={
-                "upload_url": upload_url,
-                "file_path": request.remote_path,
                 "token": token,
+                "file_path": request.remote_path,
             },
         )
         result = await self.dispatcher.dispatch(task)

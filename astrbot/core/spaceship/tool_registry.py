@@ -924,7 +924,6 @@ def _make_uploadfile_handler(
             return err or "Error: spaceship is disabled."
 
         try:
-            base_url = _get_base_url(config_getter)
             result = await runtime.upload_file(
                 request=UploadFileToolRequest(
                     local_path=local_path,
@@ -932,7 +931,6 @@ def _make_uploadfile_handler(
                     timeout_sec=int(timeout_sec) if timeout_sec else 120,
                 ),
                 requested_by=_requested_by_from_event(event),
-                base_url=base_url,
             )
             return result
         except Exception as exc:
@@ -958,7 +956,6 @@ def _make_downloadfile_handler(
             return err or "Error: spaceship is disabled."
 
         try:
-            base_url = _get_base_url(config_getter)
             result = await runtime.download_file(
                 request=DownloadFileToolRequest(
                     remote_path=remote_path,
@@ -966,7 +963,6 @@ def _make_downloadfile_handler(
                     timeout_sec=int(timeout_sec) if timeout_sec else 120,
                 ),
                 requested_by=_requested_by_from_event(event),
-                base_url=base_url,
             )
             return result
         except Exception as exc:
@@ -974,20 +970,4 @@ def _make_downloadfile_handler(
 
     return downloadfile_handler
 
-
-def _get_base_url(config_getter: Callable[[], dict]) -> str:
-    """Derive the AstrBot HTTP base URL from dashboard config."""
-    try:
-        from astrbot.core import sp
-        cfg = sp.config_manager.get("dashboard", {})
-        host = str(cfg.get("host", "0.0.0.0"))
-        port = int(cfg.get("port", 6185))
-        # If binding to all interfaces, use localhost for local access
-        if host in ("0.0.0.0", "::"):
-            host = "127.0.0.1"
-        ssl_cfg = cfg.get("ssl", {})
-        scheme = "https" if ssl_cfg.get("enable") else "http"
-        return f"{scheme}://{host}:{port}"
-    except Exception:
-        return "http://127.0.0.1:6185"
 
