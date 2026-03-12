@@ -409,7 +409,7 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             type="text",
             text=(
                 f"Background task dedicated to subagent '{tool.agent.name}' submitted. task_id={task_id}. "
-                f"The subagent '{tool.agent.name}' is working on the task on hehalf you. "
+                f"The subagent '{tool.agent.name}' is working on the task on behalf of you. "
                 f"You will be notified when it finishes."
             ),
         )

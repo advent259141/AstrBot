@@ -290,13 +290,6 @@ print(
     return _build_python_exec_command(script)
 
 
-def _build_sync_and_scan_command() -> str:
-    """Legacy combined command kept for backward compatibility.
-
-    New code paths should prefer apply + scan split helpers.
-    """
-    return f"{_build_apply_sync_command()}\n{_build_scan_command()}"
-
 
 def _shell_exec_succeeded(result: dict) -> bool:
     if "success" in result:
