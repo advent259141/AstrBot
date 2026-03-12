@@ -353,6 +353,54 @@ def register_spaceship_tools(
         handler=_make_executepython_handler(runtime, config_getter),
     )
 
+    # uploadfile tool
+    llm_tools.add_func(
+        name="uploadfile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "local_path",
+                "description": "必填。AstrBot 本地要上传的文件路径。",
+            },
+            {
+                "type": "string",
+                "name": "remote_path",
+                "description": "必填。远程节点上的目标保存路径。",
+            },
+            {
+                "type": "number",
+                "name": "timeout_sec",
+                "description": "可选。超时秒数，默认 120。",
+            },
+        ],
+        desc="通过 HTTP 将 AstrBot 本地文件上传到当前已进入的 spaceship 节点；使用前需先调用 enternode",
+        handler=_make_uploadfile_handler(runtime, config_getter),
+    )
+
+    # downloadfile tool
+    llm_tools.add_func(
+        name="downloadfile",
+        func_args=[
+            {
+                "type": "string",
+                "name": "remote_path",
+                "description": "必填。远程节点上要下载的文件路径。",
+            },
+            {
+                "type": "string",
+                "name": "local_path",
+                "description": "必填。AstrBot 本地的保存路径。",
+            },
+            {
+                "type": "number",
+                "name": "timeout_sec",
+                "description": "可选。超时秒数，默认 120。",
+            },
+        ],
+        desc="通过 HTTP 将远程 spaceship 节点上的文件下载到 AstrBot 本地；使用前需先调用 enternode",
+        handler=_make_downloadfile_handler(runtime, config_getter),
+    )
+
 def _check_enabled(config_getter: Callable[[], dict]) -> tuple[bool, str | None]:
     """Check if spaceship is enabled in config.
 
@@ -857,3 +905,89 @@ def _make_executepython_handler(
             return f"Error: {exc}"
 
     return executepython_handler
+
+
+def _make_uploadfile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create uploadfile tool handler."""
+    from .models import UploadFileToolRequest
+
+    async def uploadfile_handler(
+        event: object,
+        local_path: str,
+        remote_path: str,
+        timeout_sec: int = 120,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            base_url = _get_base_url(config_getter)
+            result = await runtime.upload_file(
+                request=UploadFileToolRequest(
+                    local_path=local_path,
+                    remote_path=remote_path,
+                    timeout_sec=int(timeout_sec) if timeout_sec else 120,
+                ),
+                requested_by=_requested_by_from_event(event),
+                base_url=base_url,
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return uploadfile_handler
+
+
+def _make_downloadfile_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create downloadfile tool handler."""
+    from .models import DownloadFileToolRequest
+
+    async def downloadfile_handler(
+        event: object,
+        remote_path: str,
+        local_path: str,
+        timeout_sec: int = 120,
+    ) -> str:
+        enabled, err = _check_enabled(config_getter)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            base_url = _get_base_url(config_getter)
+            result = await runtime.download_file(
+                request=DownloadFileToolRequest(
+                    remote_path=remote_path,
+                    local_path=local_path,
+                    timeout_sec=int(timeout_sec) if timeout_sec else 120,
+                ),
+                requested_by=_requested_by_from_event(event),
+                base_url=base_url,
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return downloadfile_handler
+
+
+def _get_base_url(config_getter: Callable[[], dict]) -> str:
+    """Derive the AstrBot HTTP base URL from dashboard config."""
+    try:
+        from astrbot.core import sp
+        cfg = sp.config_manager.get("dashboard", {})
+        host = str(cfg.get("host", "0.0.0.0"))
+        port = int(cfg.get("port", 6185))
+        # If binding to all interfaces, use localhost for local access
+        if host in ("0.0.0.0", "::"):
+            host = "127.0.0.1"
+        ssl_cfg = cfg.get("ssl", {})
+        scheme = "https" if ssl_cfg.get("enable") else "http"
+        return f"{scheme}://{host}:{port}"
+    except Exception:
+        return "http://127.0.0.1:6185"
+

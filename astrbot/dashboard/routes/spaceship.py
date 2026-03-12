@@ -1,7 +1,8 @@
+import os
 import traceback
 from typing import Any
 
-from quart import jsonify, request, websocket
+from quart import jsonify, request, send_file, websocket
 
 from astrbot.core import logger
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
@@ -25,6 +26,13 @@ class SpaceshipRoute(Route):
         ]
         self.register_routes()
         self.app.websocket("/api/spaceship/ws")(self.spaceship_ws)
+        # HTTP file transfer endpoints (token-authenticated, no JWT)
+        self.app.route(
+            "/api/spaceship/files/<token>", methods=["GET"]
+        )(self.file_download)
+        self.app.route(
+            "/api/spaceship/files/upload", methods=["POST"]
+        )(self.file_upload)
 
     async def get_config(self):
         try:
@@ -85,6 +93,56 @@ class SpaceshipRoute(Route):
         except Exception as e:
             logger.error(traceback.format_exc())
             return jsonify(Response().error(f"获取节点详情失败: {e!s}").__dict__)
+
+    async def file_download(self, token: str):
+        """Serve a file to a node using a one-time download token."""
+        try:
+            runtime = self.core_lifecycle.spaceship_runtime
+            if runtime is None:
+                return jsonify({"error": "runtime not initialized"}), 503
+            file_path = runtime.file_transfer.consume_download_ticket(token)
+            if file_path is None:
+                return jsonify({"error": "invalid or expired token"}), 403
+            if not os.path.isfile(file_path):
+                return jsonify({"error": "file not found"}), 404
+            return await send_file(
+                file_path,
+                as_attachment=True,
+                attachment_filename=os.path.basename(file_path),
+            )
+        except Exception as e:
+            logger.error(f"file_download error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
+
+    async def file_upload(self):
+        """Receive a file upload from a node using a one-time upload token."""
+        try:
+            runtime = self.core_lifecycle.spaceship_runtime
+            if runtime is None:
+                return jsonify({"error": "runtime not initialized"}), 503
+
+            files = await request.files
+            form = await request.form
+            token = form.get("token", "")
+            if not token:
+                return jsonify({"error": "token is required"}), 400
+
+            save_path = runtime.file_transfer.consume_upload_ticket(token)
+            if save_path is None:
+                return jsonify({"error": "invalid or expired token"}), 403
+
+            uploaded = files.get("file")
+            if uploaded is None:
+                return jsonify({"error": "no file in request"}), 400
+
+            parent = os.path.dirname(save_path)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            await uploaded.save(save_path)
+            return jsonify({"ok": True, "path": save_path})
+        except Exception as e:
+            logger.error(f"file_upload error: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 500
 
     async def spaceship_ws(self) -> None:
         runtime = self.core_lifecycle.spaceship_runtime

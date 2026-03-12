@@ -8,10 +8,12 @@ from typing import Any
 
 from .components import SpaceshipNodeBooter
 from .dispatcher import TaskDispatcher
+from .file_transfer import FileTransferService
 from .gateway import SpaceshipGatewayService
 from .models import (
     CopyFileToolRequest,
     DeleteFileToolRequest,
+    DownloadFileToolRequest,
     EditFileToolRequest,
     ExecutePythonToolRequest,
     GrepToolRequest,
@@ -21,6 +23,7 @@ from .models import (
     SessionConnection,
     ShellToolRequest,
     SpaceshipNode,
+    UploadFileToolRequest,
     WriteFileToolRequest,
 )
 from .session import SessionHub
@@ -37,11 +40,13 @@ class SpaceshipRuntime:
     dispatcher: TaskDispatcher = field(init=False)
     gateway: SpaceshipGatewayService = field(init=False)
     tool_service: SpaceshipToolService = field(init=False)
+    file_transfer: FileTransferService = field(init=False)
 
     def __post_init__(self) -> None:
         self.session_hub = SessionHub()
         self.dispatcher = TaskDispatcher(session_hub=self.session_hub)
         self.gateway = SpaceshipGatewayService(runtime=self)
+        self.file_transfer = FileTransferService()
         self.tool_service = SpaceshipToolService(
             dispatcher=self.dispatcher,
             runtime=self,
@@ -217,3 +222,20 @@ class SpaceshipRuntime:
         return await self.tool_service.execute_python(
             request=request, requested_by=requested_by
         )
+
+    async def upload_file(
+        self, request: UploadFileToolRequest, requested_by: str, base_url: str
+    ) -> str:
+        """Upload a file from AstrBot to the remote node (tool layer)."""
+        return await self.tool_service.upload_file(
+            request=request, requested_by=requested_by, base_url=base_url
+        )
+
+    async def download_file(
+        self, request: DownloadFileToolRequest, requested_by: str, base_url: str
+    ) -> str:
+        """Download a file from the remote node to AstrBot (tool layer)."""
+        return await self.tool_service.download_file(
+            request=request, requested_by=requested_by, base_url=base_url
+        )
+

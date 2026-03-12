@@ -166,6 +166,24 @@ class ExecutePythonToolRequest:
     timeout_sec: int = 60
 
 
+@dataclass(slots=True)
+class UploadFileToolRequest:
+    """Request to upload a file from AstrBot to the remote node."""
+
+    local_path: str
+    remote_path: str
+    timeout_sec: int = 120
+
+
+@dataclass(slots=True)
+class DownloadFileToolRequest:
+    """Request to download a file from the remote node to AstrBot."""
+
+    remote_path: str
+    local_path: str
+    timeout_sec: int = 120
+
+
 class SessionConnection(Protocol):
     """Protocol for websocket connections that can send JSON."""
 
