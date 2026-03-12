@@ -13,7 +13,6 @@ does not require changes here.
 from __future__ import annotations
 
 import platform
-from functools import cache
 from typing import TYPE_CHECKING
 
 from astrbot.api import logger

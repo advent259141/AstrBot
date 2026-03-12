@@ -17,13 +17,6 @@ from astrbot.core.agent.run_context import ContextWrapper
 from astrbot.core.agent.tool import FunctionTool, ToolSet
 from astrbot.core.agent.tool_executor import BaseFunctionToolExecutor
 from astrbot.core.astr_agent_context import AstrAgentContext
-
-from astrbot.core.tools.prompts import (
-    BACKGROUND_TASK_RESULT_WOKE_SYSTEM_PROMPT,
-    BACKGROUND_TASK_WOKE_USER_PROMPT,
-    CONVERSATION_HISTORY_INJECT_PREFIX,
-)
-from astrbot.core.tools.send_message import SEND_MESSAGE_TO_USER_TOOL
 from astrbot.core.cron.events import CronMessageEvent
 from astrbot.core.message.components import Image
 from astrbot.core.message.message_event_result import (
@@ -34,6 +27,12 @@ from astrbot.core.message.message_event_result import (
 from astrbot.core.platform.message_session import MessageSession
 from astrbot.core.provider.entites import ProviderRequest
 from astrbot.core.provider.register import llm_tools
+from astrbot.core.tools.prompts import (
+    BACKGROUND_TASK_RESULT_WOKE_SYSTEM_PROMPT,
+    BACKGROUND_TASK_WOKE_USER_PROMPT,
+    CONVERSATION_HISTORY_INJECT_PREFIX,
+)
+from astrbot.core.tools.send_message import SEND_MESSAGE_TO_USER_TOOL
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 from astrbot.core.utils.history_saver import persist_agent_history
 from astrbot.core.utils.image_ref_utils import is_supported_image_ref

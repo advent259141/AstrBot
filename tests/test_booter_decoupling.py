@@ -231,7 +231,9 @@ class TestApplySandboxToolsRefactored:
     def test_neo_tools_registered_via_provider(self):
         """get_tools() returns full neo tool set (18 tools) for sandbox/neo config."""
         try:
-            from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+            from astrbot.core.computer.computer_tool_provider import (
+                ComputerToolProvider,
+            )
             from astrbot.core.tool_provider import ToolProviderContext
         except ImportError:
             pytest.skip("circular import")
@@ -250,7 +252,9 @@ class TestApplySandboxToolsRefactored:
     def test_neo_prompt_injected_via_provider(self):
         """get_system_prompt_addon() includes sandbox hint and neo-specific fragments."""
         try:
-            from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+            from astrbot.core.computer.computer_tool_provider import (
+                ComputerToolProvider,
+            )
             from astrbot.core.tool_provider import ToolProviderContext
         except ImportError:
             pytest.skip("circular import")
@@ -269,7 +273,9 @@ class TestApplySandboxToolsRefactored:
     def test_shipyard_no_neo_prompt_via_provider(self):
         """Shipyard config: get_tools returns 4 tools, prompt has no neo lifecycle text."""
         try:
-            from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+            from astrbot.core.computer.computer_tool_provider import (
+                ComputerToolProvider,
+            )
             from astrbot.core.tool_provider import ToolProviderContext
         except ImportError:
             pytest.skip("circular import")
@@ -305,7 +311,9 @@ class TestApplySandboxToolsRefactored:
         The executor rejects browser calls when the capability is absent.
         """
         try:
-            from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+            from astrbot.core.computer.computer_tool_provider import (
+                ComputerToolProvider,
+            )
             from astrbot.core.tool_provider import ToolProviderContext
         except ImportError:
             pytest.skip("circular import")
@@ -329,7 +337,9 @@ class TestApplySandboxToolsRefactored:
     def test_none_runtime_returns_empty(self):
         """runtime='none' must return no tools and no prompt addon."""
         try:
-            from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+            from astrbot.core.computer.computer_tool_provider import (
+                ComputerToolProvider,
+            )
             from astrbot.core.tool_provider import ToolProviderContext
         except ImportError:
             pytest.skip("circular import")
@@ -340,7 +350,9 @@ class TestApplySandboxToolsRefactored:
     def test_shipyard_missing_endpoint_returns_empty(self):
         """Shipyard config without endpoint/token must return [] (not crash)."""
         try:
-            from astrbot.core.computer.computer_tool_provider import ComputerToolProvider
+            from astrbot.core.computer.computer_tool_provider import (
+                ComputerToolProvider,
+            )
             from astrbot.core.tool_provider import ToolProviderContext
         except ImportError:
             pytest.skip("circular import")
