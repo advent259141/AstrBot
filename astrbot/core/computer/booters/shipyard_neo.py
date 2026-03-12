@@ -474,9 +474,7 @@ class ShipyardNeoBooter(ComputerBooter):
         return self._shell
 
     @property
-    def browser(self) -> BrowserComponent:
-        if self._browser is None:
-            raise RuntimeError("ShipyardNeoBooter is not initialized.")
+    def browser(self) -> BrowserComponent | None:
         return self._browser
 
     async def upload_file(self, path: str, file_name: str) -> dict:

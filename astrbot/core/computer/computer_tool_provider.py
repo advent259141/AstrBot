@@ -12,7 +12,6 @@ does not require changes here.
 
 from __future__ import annotations
 
-import os
 import platform
 from functools import cache
 from typing import TYPE_CHECKING
@@ -202,8 +201,6 @@ class ComputerToolProvider:
             if not ep or not at:
                 logger.error("Shipyard sandbox configuration is incomplete.")
                 return []
-            os.environ["SHIPYARD_ENDPOINT"] = ep
-            os.environ["SHIPYARD_ACCESS_TOKEN"] = at
 
         # Always return the full tool set for schema stability
         return get_default_sandbox_tools(ctx.sandbox_cfg)
