@@ -104,11 +104,11 @@ class AgentRunnerRegistry:
     def _inject_config_metadata(entry: AgentRunnerEntry) -> None:
         """Mutate CONFIG_METADATA_3 to add the runner option."""
         try:
+            from astrbot.core.config.astrbot_config import AstrBotConfig
             from astrbot.core.config.default import (
                 CONFIG_METADATA_2,
                 CONFIG_METADATA_3,
             )
-            from astrbot.core.config.astrbot_config import AstrBotConfig
 
             # --- CONFIG_METADATA_3: agent_runner dropdown ---
             agent_runner_section = (
@@ -203,11 +203,11 @@ class AgentRunnerRegistry:
     def _remove_config_metadata(entry: AgentRunnerEntry) -> None:
         """Reverse the injection when a runner is unregistered."""
         try:
+            from astrbot.core.config.astrbot_config import AstrBotConfig
             from astrbot.core.config.default import (
                 CONFIG_METADATA_2,
                 CONFIG_METADATA_3,
             )
-            from astrbot.core.config.astrbot_config import AstrBotConfig
 
             agent_runner_section = (
                 CONFIG_METADATA_3.get("ai_group", {})

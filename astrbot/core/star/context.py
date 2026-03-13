@@ -46,6 +46,7 @@ from .star_handler import EventType, StarHandlerMetadata, star_handlers_registry
 logger = logging.getLogger("astrbot")
 
 if TYPE_CHECKING:
+    from astrbot.core.agent.runners.registry import AgentRunnerEntry
     from astrbot.core.cron.manager import CronJobManager
 
 
@@ -585,7 +586,7 @@ class Context:
 
     def register_agent_runner(
         self,
-        entry: "AgentRunnerEntry",
+        entry: AgentRunnerEntry,
     ) -> None:
         """注册一个第三方 Agent Runner。
 
