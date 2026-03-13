@@ -130,12 +130,12 @@ class AstrBotConfig(dict):
                 # 直接使用现有配置
                 new_conf[key] = conf[key]
 
-        # 检查是否存在参考配置中没有的配置项
+        # 保留参考配置中没有但用户配置中存在的配置项（可能是插件注入的）
         for key in list(conf.keys()):
             if key not in refer_conf:
                 path_ = path + "." + key if path else key
-                logger.info(f"检查到配置项 {path_} 不存在，将从当前配置中删除")
-                has_new = True
+                logger.debug(f"配置项 {path_} 不在默认配置中，保留（可能由插件注入）")
+                new_conf[key] = conf[key]
 
         # 顺序不一致也算作变更
         if list(conf.keys()) != list(new_conf.keys()):

@@ -2456,7 +2456,6 @@ CONFIG_METADATA_2 = {
                         "type": "int",
                         "hint": "对应 LangGraph recursion_limit。",
                     },
-
                     "auto_save_history": {
                         "description": "由 Coze 管理对话记录",
                         "type": "bool",
@@ -2537,7 +2536,6 @@ CONFIG_METADATA_2 = {
                     "deerflow_agent_runner_provider_id": {
                         "type": "string",
                     },
-
                     "max_agent_step": {
                         "type": "int",
                     },
@@ -2805,7 +2803,6 @@ CONFIG_METADATA_3 = {
                             "provider_settings.enable": True,
                         },
                     },
-
                 },
             },
             "ai": {

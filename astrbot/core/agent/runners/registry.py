@@ -104,7 +104,11 @@ class AgentRunnerRegistry:
     def _inject_config_metadata(entry: AgentRunnerEntry) -> None:
         """Mutate CONFIG_METADATA_3 to add the runner option."""
         try:
-            from astrbot.core.config.default import CONFIG_METADATA_2, CONFIG_METADATA_3
+            from astrbot.core.config.default import (
+                CONFIG_METADATA_2,
+                CONFIG_METADATA_3,
+                DEFAULT_CONFIG,
+            )
 
             # --- CONFIG_METADATA_3: agent_runner dropdown ---
             agent_runner_section = (
@@ -163,6 +167,32 @@ class AgentRunnerRegistry:
                     if field_name not in provider_schema:
                         provider_schema[field_name] = field_def
 
+            # --- DEFAULT_CONFIG: provider_id default value ---
+            # Must exist so config migration doesn't strip the saved value.
+            provider_settings = DEFAULT_CONFIG.get("provider_settings", {})
+            if entry.provider_id_key not in provider_settings:
+                provider_settings[entry.provider_id_key] = ""
+
+            # --- CONFIG_METADATA_2: provider config_template ---
+            provider_config_template = (
+                CONFIG_METADATA_2
+                .get("provider_group", {})
+                .get("metadata", {})
+                .get("provider", {})
+                .get("config_template", {})
+            )
+            if entry.display_name not in provider_config_template:
+                template: dict[str, Any] = {
+                    "id": entry.runner_type,
+                    "provider": entry.runner_type,
+                    "type": entry.runner_type,
+                    "provider_type": "agent_runner",
+                    "enable": True,
+                }
+                for field_name, field_def in entry.provider_config_fields.items():
+                    template[field_name] = field_def.get("default", "")
+                provider_config_template[entry.display_name] = template
+
         except Exception:
             logger.warning(
                 "Failed to inject config metadata for runner %s",
@@ -174,7 +204,11 @@ class AgentRunnerRegistry:
     def _remove_config_metadata(entry: AgentRunnerEntry) -> None:
         """Reverse the injection when a runner is unregistered."""
         try:
-            from astrbot.core.config.default import CONFIG_METADATA_2, CONFIG_METADATA_3
+            from astrbot.core.config.default import (
+                CONFIG_METADATA_2,
+                CONFIG_METADATA_3,
+                DEFAULT_CONFIG,
+            )
 
             agent_runner_section = (
                 CONFIG_METADATA_3
@@ -218,6 +252,20 @@ class AgentRunnerRegistry:
             if provider_schema and entry.provider_config_fields:
                 for field_name in entry.provider_config_fields:
                     provider_schema.pop(field_name, None)
+
+            # --- CONFIG_METADATA_2: config_template cleanup ---
+            provider_config_template = (
+                CONFIG_METADATA_2
+                .get("provider_group", {})
+                .get("metadata", {})
+                .get("provider", {})
+                .get("config_template", {})
+            )
+            provider_config_template.pop(entry.display_name, None)
+
+            # --- DEFAULT_CONFIG cleanup ---
+            provider_settings = DEFAULT_CONFIG.get("provider_settings", {})
+            provider_settings.pop(entry.provider_id_key, None)
 
         except Exception:
             logger.warning(
