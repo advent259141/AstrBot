@@ -583,6 +583,47 @@ class Context:
         """
         self.provider_manager.provider_insts.append(provider)
 
+    def register_agent_runner(
+        self,
+        entry: "AgentRunnerEntry",
+    ) -> None:
+        """注册一个第三方 Agent Runner。
+
+        插件可通过此方法注册自定义的 Agent Runner，注册后会自动出现在 WebUI
+        的执行器下拉选项中。
+
+        .. versionadded:: 4.6.0 (sdk)
+
+        Args:
+            entry: Agent Runner 注册条目。
+
+        Example::
+
+            from astrbot.core.agent.runners.registry import AgentRunnerEntry
+
+            context.register_agent_runner(AgentRunnerEntry(
+                runner_type="maibot",
+                runner_cls=MaiBotAgentRunner,
+                provider_id_key="maibot_agent_runner_provider_id",
+                display_name="MaiBot",
+            ))
+        """
+        from astrbot.core.agent.runners.registry import agent_runner_registry
+
+        agent_runner_registry.register(entry)
+
+    def unregister_agent_runner(self, runner_type: str) -> None:
+        """移除一个已注册的第三方 Agent Runner。
+
+        .. versionadded:: 4.6.0 (sdk)
+
+        Args:
+            runner_type: Runner 类型标识符。
+        """
+        from astrbot.core.agent.runners.registry import agent_runner_registry
+
+        agent_runner_registry.unregister(runner_type)
+
     def register_llm_tool(
         self,
         name: str,

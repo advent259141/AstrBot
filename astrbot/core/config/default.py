@@ -114,7 +114,6 @@ DEFAULT_CONFIG = {
         "coze_agent_runner_provider_id": "",
         "dashscope_agent_runner_provider_id": "",
         "deerflow_agent_runner_provider_id": "",
-        "maibot_agent_runner_provider_id": "",
         "unsupported_streaming_strategy": "realtime_segmenting",
         "reachability_check": False,
         "max_agent_step": 30,
@@ -1402,17 +1401,6 @@ CONFIG_METADATA_2 = {
                         "timeout": 300,
                         "proxy": "",
                     },
-                    "MaiBot": {
-                        "id": "maibot",
-                        "provider": "maibot",
-                        "type": "maibot",
-                        "provider_type": "agent_runner",
-                        "enable": True,
-                        "maibot_ws_url": "ws://127.0.0.1:8090/ws",
-                        "maibot_api_key": "",
-                        "maibot_platform": "astrbot",
-                        "timeout": 120,
-                    },
                     "FastGPT": {
                         "id": "fastgpt",
                         "provider": "fastgpt",
@@ -2468,21 +2456,7 @@ CONFIG_METADATA_2 = {
                         "type": "int",
                         "hint": "对应 LangGraph recursion_limit。",
                     },
-                    "maibot_ws_url": {
-                        "description": "MaiBot WebSocket URL",
-                        "type": "string",
-                        "hint": "MaiBot API-Server 的 WebSocket 地址。默认为 ws://127.0.0.1:18040/ws",
-                    },
-                    "maibot_api_key": {
-                        "description": "MaiBot API Key",
-                        "type": "string",
-                        "hint": "MaiBot API-Server 允许的 API Key。需要在 MaiBot 配置的 api_server_allowed_api_keys 中添加此 Key。",
-                    },
-                    "maibot_platform": {
-                        "description": "平台标识",
-                        "type": "string",
-                        "hint": "发送给 MaiBot 的平台标识名称。默认为 astrbot。",
-                    },
+
                     "auto_save_history": {
                         "description": "由 Coze 管理对话记录",
                         "type": "bool",
@@ -2563,9 +2537,7 @@ CONFIG_METADATA_2 = {
                     "deerflow_agent_runner_provider_id": {
                         "type": "string",
                     },
-                    "maibot_agent_runner_provider_id": {
-                        "type": "string",
-                    },
+
                     "max_agent_step": {
                         "type": "int",
                     },
@@ -2785,14 +2757,13 @@ CONFIG_METADATA_3 = {
                     "provider_settings.agent_runner_type": {
                         "description": "执行器",
                         "type": "string",
-                        "options": ["local", "dify", "coze", "dashscope", "deerflow", "maibot"],
+                        "options": ["local", "dify", "coze", "dashscope", "deerflow"],
                         "labels": [
                             "内置 Agent",
                             "Dify",
                             "Coze",
                             "阿里云百炼应用",
                             "DeerFlow",
-                            "MaiBot",
                         ],
                         "condition": {
                             "provider_settings.enable": True,
@@ -2834,15 +2805,7 @@ CONFIG_METADATA_3 = {
                             "provider_settings.enable": True,
                         },
                     },
-                    "provider_settings.maibot_agent_runner_provider_id": {
-                        "description": "MaiBot Agent 执行器提供商 ID",
-                        "type": "string",
-                        "_special": "select_agent_runner_provider:maibot",
-                        "condition": {
-                            "provider_settings.agent_runner_type": "maibot",
-                            "provider_settings.enable": True,
-                        },
-                    },
+
                 },
             },
             "ai": {

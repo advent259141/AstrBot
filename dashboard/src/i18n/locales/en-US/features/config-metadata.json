@@ -3,7 +3,7 @@
     "name": "AI",
     "agent_runner": {
       "description": "Agent Runner",
-      "hint": "Select the runner for AI conversations. Defaults to AstrBot's built-in Agent runner, which supports knowledge base, persona, and tool calling features. You don't need to modify this section unless you plan to integrate third-party Agent runners like Dify, Coze, DeerFlow, or MaiBot.",
+      "hint": "Select the runner for AI conversations. Defaults to AstrBot's built-in Agent runner, which supports knowledge base, persona, and tool calling features. You don't need to modify this section unless you plan to integrate third-party Agent runners like Dify, Coze, or DeerFlow.",
       "provider_settings": {
         "enable": {
           "description": "Enable",
@@ -16,8 +16,7 @@
             "Dify",
             "Coze",
             "Alibaba Cloud Bailian Application",
-            "DeerFlow",
-            "MaiBot"
+            "DeerFlow"
           ]
         },
         "coze_agent_runner_provider_id": {
@@ -31,9 +30,6 @@
         },
         "deerflow_agent_runner_provider_id": {
           "description": "DeerFlow Agent Runner Provider ID"
-        },
-        "maibot_agent_runner_provider_id": {
-          "description": "MaiBot Agent Runner Provider ID"
         }
       }
     },
@@ -1511,18 +1507,6 @@
       "deerflow_recursion_limit": {
         "description": "Recursion limit",
         "hint": "Maps to LangGraph recursion_limit."
-      },
-      "maibot_ws_url": {
-        "description": "MaiBot WebSocket URL",
-        "hint": "WebSocket address of MaiBot API-Server. Default: ws://127.0.0.1:8090/ws"
-      },
-      "maibot_api_key": {
-        "description": "MaiBot API Key",
-        "hint": "Authentication key for MaiBot API-Server. Must match the api_server_allowed_api_keys in MaiBot config."
-      },
-      "maibot_platform": {
-        "description": "MaiBot Platform Identifier",
-        "hint": "Platform identifier sent to MaiBot. Default: astrbot."
       },
       "auto_save_history": {
         "description": "Conversation history managed by Coze",

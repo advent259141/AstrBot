@@ -3,6 +3,10 @@ import typing as T
 
 import astrbot.core.message.components as Comp
 from astrbot.core import logger
+from astrbot.core.agent.hooks import BaseAgentRunHooks
+from astrbot.core.agent.response import AgentResponse, AgentResponseData
+from astrbot.core.agent.run_context import ContextWrapper, TContext
+from astrbot.core.agent.runners.base import AgentState, BaseAgentRunner
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.provider.entities import (
     LLMResponse,
@@ -10,10 +14,6 @@ from astrbot.core.provider.entities import (
 )
 from astrbot.core.provider.register import llm_tools
 
-from ...hooks import BaseAgentRunHooks
-from ...response import AgentResponseData
-from ...run_context import ContextWrapper, TContext
-from ..base import AgentResponse, AgentState, BaseAgentRunner
 from .maibot_ws_client import MaiBotWSClient
 
 if sys.version_info >= (3, 12):
