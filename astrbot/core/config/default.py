@@ -164,6 +164,7 @@ DEFAULT_CONFIG = {
         "heartbeat_timeout_sec": 60,
         "allow_auto_register": False,
         "bootstrap_token": "",
+        "require_admin": True,
         "default_granted_scopes": ["exec", "list_dir", "read_file"],
     },
     "provider_stt_settings": {

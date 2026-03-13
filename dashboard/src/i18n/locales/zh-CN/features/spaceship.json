@@ -20,6 +20,8 @@
     "enableHint": "打开后允许 AstrBot 承载远程节点管理能力。",
     "autoRegister": "允许自动注册节点",
     "autoRegisterHint": "启用后，持有有效引导凭证的 agent 可自动登记到节点列表。",
+    "requireAdmin": "仅管理员可操作",
+    "requireAdminHint": "开启后，只有管理员才能使用 Spaceship 工具（如远程执行命令、读写文件等）。",
     "websocketPath": "WebSocket 路径",
     "bootstrapToken": "引导令牌",
     "heartbeatTimeout": "心跳超时秒数"

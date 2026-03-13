@@ -20,6 +20,8 @@
     "enableHint": "Allow AstrBot to host remote node management capabilities.",
     "autoRegister": "Allow Automatic Node Registration",
     "autoRegisterHint": "Agents with valid bootstrap credentials can register themselves automatically.",
+    "requireAdmin": "Require Admin Permission",
+    "requireAdminHint": "When enabled, only administrators can use Spaceship tools (e.g., remote shell, file operations).",
     "websocketPath": "WebSocket Path",
     "bootstrapToken": "Bootstrap Token",
     "heartbeatTimeout": "Heartbeat Timeout (seconds)"

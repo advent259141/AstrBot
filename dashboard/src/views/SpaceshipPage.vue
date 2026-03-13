@@ -47,6 +47,15 @@
               </template>
             </v-switch>
 
+            <v-switch v-model="cfg.require_admin" color="primary" inset hide-details class="mb-4">
+              <template #label>
+                <div class="d-flex flex-column">
+                  <span class="text-body-2 font-weight-medium">{{ tm('form.requireAdmin') }}</span>
+                  <span class="text-caption text-medium-emphasis">{{ tm('form.requireAdminHint') }}</span>
+                </div>
+              </template>
+            </v-switch>
+
             <v-text-field
               v-model="cfg.websocket_path"
               :label="tm('form.websocketPath')"
@@ -191,6 +200,7 @@ type SpaceshipConfig = {
   websocket_path: string
   heartbeat_timeout_sec: number
   allow_auto_register: boolean
+  require_admin: boolean
   bootstrap_token: string
   default_granted_scopes: string[]
 }
@@ -216,6 +226,7 @@ const cfg = ref<SpaceshipConfig>({
   websocket_path: '/api/spaceship/ws',
   heartbeat_timeout_sec: 60,
   allow_auto_register: false,
+  require_admin: true,
   bootstrap_token: '',
   default_granted_scopes: ['exec', 'list_dir', 'read_file']
 })
@@ -238,6 +249,7 @@ function normalizeConfig(raw: any): SpaceshipConfig {
     websocket_path: (raw?.websocket_path ?? '/api/spaceship/ws').toString(),
     heartbeat_timeout_sec: Number(raw?.heartbeat_timeout_sec ?? 60),
     allow_auto_register: !!raw?.allow_auto_register,
+    require_admin: raw?.require_admin !== false,
     bootstrap_token: (raw?.bootstrap_token ?? '').toString(),
     default_granted_scopes: Array.isArray(raw?.default_granted_scopes)
       ? raw.default_granted_scopes.map((item: any) => item.toString())

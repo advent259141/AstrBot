@@ -45,6 +45,7 @@ class SpaceshipRoute(Route):
                     "heartbeat_timeout_sec": 60,
                     "allow_auto_register": False,
                     "bootstrap_token": "",
+                    "require_admin": True,
                     "default_granted_scopes": ["exec", "list_dir", "read_file"],
                 }
             data.setdefault("enable", False)
@@ -52,6 +53,7 @@ class SpaceshipRoute(Route):
             data.setdefault("heartbeat_timeout_sec", 60)
             data.setdefault("allow_auto_register", False)
             data.setdefault("bootstrap_token", "")
+            data.setdefault("require_admin", True)
             data.setdefault("default_granted_scopes", ["exec", "list_dir", "read_file"])
             return jsonify(Response().ok(data=data).__dict__)
         except Exception as e:

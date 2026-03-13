@@ -401,15 +401,20 @@ def register_spaceship_tools(
         handler=_make_downloadfile_handler(runtime, config_getter),
     )
 
-def _check_enabled(config_getter: Callable[[], dict]) -> tuple[bool, str | None]:
-    """Check if spaceship is enabled in config.
+def _check_enabled(
+    config_getter: Callable[[], dict], event: object = None
+) -> tuple[bool, str | None]:
+    """Check if spaceship is enabled and the caller has admin permission.
 
     Returns:
-        (is_enabled, error_message): error_message is None if enabled
+        (is_enabled, error_message): error_message is None if all checks pass
     """
     spaceship_cfg = config_getter()
     if not spaceship_cfg.get("enable", False):
         return False, "Error: spaceship gateway is disabled."
+    if spaceship_cfg.get("require_admin", True):
+        if event is not None and not getattr(event, "is_admin", lambda: False)():
+            return False, "Error: 权限不足，spaceship 操作需要管理员权限。"
     return True, None
 
 
@@ -440,8 +445,7 @@ def _make_listnode_handler(
     """Create listnode tool handler."""
 
     async def listnode_handler(event: object, status: str | None = None) -> str:
-        _ = event
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -470,8 +474,7 @@ def _make_getnodeinfo_handler(
     """Create getnodeinfo tool handler."""
 
     async def getnodeinfo_handler(event: object, node_id: str) -> str:
-        _ = event
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -489,7 +492,7 @@ def _make_enternode_handler(
     """Create enternode tool handler."""
 
     async def enternode_handler(event: object, node_id: str) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -510,7 +513,7 @@ def _make_exitnode_handler(
     """Create exitnode tool handler."""
 
     async def exitnode_handler(event: object) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -534,7 +537,7 @@ def _make_executeshell_handler(
         cwd: str = "",
         timeout_sec: int = 30,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -565,7 +568,7 @@ def _make_listdir_handler(runtime: SpaceshipRuntime, config_getter: Callable[[],
         show_hidden: bool = False,
         limit: int = 200,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -597,7 +600,7 @@ def _make_readfile_handler(
         path: str,
         max_bytes: int = 65536,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -629,7 +632,7 @@ def _make_writefile_handler(
         append: bool = False,
         create_dirs: bool = True,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -661,8 +664,7 @@ def _make_canceltask_handler(
         node_id: str,
         reason: str = "",
     ) -> str:
-        _ = event
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -692,7 +694,7 @@ def _make_editfile_handler(
         path: str,
         edits: str,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -741,7 +743,7 @@ def _make_grepfile_handler(
         exclude_globs: str = "",
         max_matches: int = 100,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -792,7 +794,7 @@ def _make_deletefile_handler(
         path: str,
         recursive: bool = False,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -823,7 +825,7 @@ def _make_movefile_handler(
         dst: str,
         overwrite: bool = False,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -855,7 +857,7 @@ def _make_copyfile_handler(
         dst: str,
         recursive: bool = False,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -887,7 +889,7 @@ def _make_executepython_handler(
         cwd: str = "",
         timeout_sec: int = 60,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -919,7 +921,7 @@ def _make_uploadfile_handler(
         remote_path: str,
         timeout_sec: int = 120,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
@@ -951,7 +953,7 @@ def _make_downloadfile_handler(
         local_path: str,
         timeout_sec: int = 120,
     ) -> str:
-        enabled, err = _check_enabled(config_getter)
+        enabled, err = _check_enabled(config_getter, event)
         if not enabled:
             return err or "Error: spaceship is disabled."
 
