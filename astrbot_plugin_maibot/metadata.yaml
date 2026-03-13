@@ -1,5 +1,0 @@
-name: astrbot_plugin_maibot
-desc: MaiBot Agent Runner 插件 - 通过 WebSocket 连接 MaiBot API-Server
-author: AstrBot
-repo: ""
-version: 0.1.0
