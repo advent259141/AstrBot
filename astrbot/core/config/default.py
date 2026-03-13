@@ -166,6 +166,8 @@ DEFAULT_CONFIG = {
         "bootstrap_token": "",
         "require_admin": True,
         "default_granted_scopes": ["exec", "list_dir", "read_file"],
+        "node_aliases": {},
+        "node_descriptions": {},
     },
     "provider_stt_settings": {
         "enable": False,

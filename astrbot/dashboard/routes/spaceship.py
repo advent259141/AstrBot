@@ -23,6 +23,7 @@ class SpaceshipRoute(Route):
             ("/spaceship/config", ("POST", self.update_config)),
             ("/spaceship/nodes", ("GET", self.list_nodes)),
             ("/spaceship/nodes/<node_id>", ("GET", self.get_node)),
+            ("/spaceship/nodes/<node_id>/alias", ("POST", self.update_node_alias)),
         ]
         self.register_routes()
         self.app.websocket("/api/spaceship/ws")(self.spaceship_ws)
@@ -55,6 +56,8 @@ class SpaceshipRoute(Route):
             data.setdefault("bootstrap_token", "")
             data.setdefault("require_admin", True)
             data.setdefault("default_granted_scopes", ["exec", "list_dir", "read_file"])
+            data.setdefault("node_aliases", {})
+            data.setdefault("node_descriptions", {})
             return jsonify(Response().ok(data=data).__dict__)
         except Exception as e:
             logger.error(traceback.format_exc())
@@ -95,6 +98,23 @@ class SpaceshipRoute(Route):
         except Exception as e:
             logger.error(traceback.format_exc())
             return jsonify(Response().error(f"获取节点详情失败: {e!s}").__dict__)
+
+    async def update_node_alias(self, node_id: str):
+        try:
+            data = await request.json
+            if not isinstance(data, dict) or "alias" not in data:
+                return jsonify(Response().error("请求体必须包含 alias 字段").__dict__)
+            alias = str(data["alias"]).strip()
+            runtime = self.core_lifecycle.spaceship_runtime
+            if runtime is None:
+                return jsonify(Response().error("spaceship runtime 未初始化").__dict__)
+            ok = runtime.set_node_alias(node_id, alias)
+            if not ok:
+                return jsonify(Response().error("节点不存在").__dict__)
+            return jsonify(Response().ok(message="别名已保存").__dict__)
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            return jsonify(Response().error(f"更新节点别名失败: {e!s}").__dict__)
 
     async def file_download(self, token: str):
         """Serve a file to a node using a one-time download token."""

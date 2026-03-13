@@ -144,30 +144,41 @@
               <th>{{ tm('table.alias') }}</th>
               <th>{{ tm('table.hostname') }}</th>
               <th>{{ tm('table.platform') }}</th>
+              <th>{{ tm('table.description') }}</th>
               <th>{{ tm('table.status') }}</th>
-              <th>{{ tm('table.scopes') }}</th>
               <th>{{ tm('table.lastSeen') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="node in nodes" :key="node.node_id">
               <td>
-                <div class="font-weight-medium">{{ node.alias || node.node_id }}</div>
+                <div v-if="editingAlias === node.node_id" class="d-flex align-center gap-1">
+                  <v-text-field
+                    v-model="editAliasValue"
+                    density="compact"
+                    variant="outlined"
+                    hide-details
+                    style="max-width: 160px"
+                    @keyup.enter="saveAlias(node.node_id)"
+                  />
+                  <v-btn icon="mdi-check" size="x-small" variant="text" color="success" @click="saveAlias(node.node_id)" />
+                  <v-btn icon="mdi-close" size="x-small" variant="text" @click="editingAlias = null" />
+                </div>
+                <div v-else class="d-flex align-center gap-1" style="cursor: pointer" @click="startEditAlias(node)">
+                  <span class="font-weight-medium">{{ node.alias || node.node_id }}</span>
+                  <v-icon size="x-small" color="grey">mdi-pencil</v-icon>
+                </div>
                 <div class="text-caption text-medium-emphasis">{{ node.node_id }}</div>
               </td>
               <td>{{ node.hostname || '-' }}</td>
               <td>{{ node.platform }}/{{ node.arch }}</td>
               <td>
+                <span class="text-caption">{{ node.description || '-' }}</span>
+              </td>
+              <td>
                 <v-chip :color="node.status === 'active' ? 'success' : 'grey'" size="small" variant="tonal">
                   {{ node.status }}
                 </v-chip>
-              </td>
-              <td>
-                <div class="d-flex flex-wrap gap-1">
-                  <v-chip v-for="scope in node.granted_scopes" :key="scope" size="x-small" variant="outlined">
-                    {{ scope }}
-                  </v-chip>
-                </div>
               </td>
               <td>{{ formatDate(node.last_seen_at) }}</td>
             </tr>
@@ -212,6 +223,7 @@ type SpaceshipNode = {
   platform: string
   arch: string
   status: string
+  description: string
   granted_scopes: string[]
   last_seen_at: string | null
 }
@@ -238,6 +250,33 @@ const snackbar = ref({
 })
 
 const activeNodes = computed(() => nodes.value.filter((node) => node.status === 'active').length)
+
+const editingAlias = ref<string | null>(null)
+const editAliasValue = ref('')
+
+function startEditAlias(node: SpaceshipNode) {
+  editingAlias.value = node.node_id
+  editAliasValue.value = node.alias || ''
+}
+
+async function saveAlias(nodeId: string) {
+  try {
+    const res = await axios.post(`/api/spaceship/nodes/${nodeId}/alias`, {
+      alias: editAliasValue.value
+    })
+    if (res.data.status === 'ok') {
+      const node = nodes.value.find((n) => n.node_id === nodeId)
+      if (node) node.alias = editAliasValue.value
+      toast(tm('messages.aliasSaved'), 'success')
+    } else {
+      toast(res.data.message || tm('messages.aliasFailed'), 'error')
+    }
+  } catch {
+    toast(tm('messages.aliasFailed'), 'error')
+  } finally {
+    editingAlias.value = null
+  }
+}
 
 function toast(message: string, color: 'success' | 'error' | 'warning' = 'success') {
   snackbar.value = { show: true, message, color }

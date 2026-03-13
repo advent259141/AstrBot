@@ -36,6 +36,7 @@ class SpaceshipNode:
     tags: list[str] = field(default_factory=list)
     agent_version: str = "0.1.0"
     default_shell: str = ""
+    description: str = ""
     maintenance_mode: bool = False
     last_seen_at: datetime | None = None
 

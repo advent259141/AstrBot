@@ -403,22 +403,3 @@ class SpaceshipToolService:
         )
         result = await self.dispatcher.dispatch(task)
         return _format_result(result)
-
-    async def sysinfo(self, requested_by: str) -> str:
-        """Get system information from the currently entered node."""
-        node_id = await self.require_selected_node_id(requested_by)
-        task = TaskSpec(
-            task_id=f"task_{uuid4().hex}",
-            task_type="sysinfo",
-            node_id=node_id,
-            requested_by=requested_by,
-            requested_via="tool",
-            tool_call_id=f"tool_{uuid4().hex}",
-            timeout_sec=15,
-            max_output_bytes=65536,
-            risk_level="normal",
-            args={},
-        )
-        result = await self.dispatcher.dispatch(task)
-        return _format_result(result)
-

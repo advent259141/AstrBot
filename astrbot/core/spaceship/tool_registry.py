@@ -401,12 +401,23 @@ def register_spaceship_tools(
         handler=_make_downloadfile_handler(runtime, config_getter),
     )
 
-    # sysinfo tool
+    # setnodedesc tool
     llm_tools.add_func(
-        name="sysinfo",
-        func_args=[],
-        desc="获取当前已进入的 spaceship 节点的系统信息（操作系统、CPU、内存等）；使用前需先调用 enternode",
-        handler=_make_sysinfo_handler(runtime, config_getter),
+        name="setnodedesc",
+        func_args=[
+            {
+                "type": "string",
+                "name": "node_id",
+                "description": "必填。要设置描述的节点 ID。",
+            },
+            {
+                "type": "string",
+                "name": "description",
+                "description": "必填。节点描述内容，用于记录该节点的关键信息（如系统版本、部署的服务、硬件配置等）。",
+            },
+        ],
+        desc="为指定 spaceship 节点设置描述信息，描述会持久化保存。可用于记录节点用途、环境信息等。",
+        handler=_make_setnodedesc_handler(runtime, config_getter),
     )
 
 def _check_enabled(
@@ -468,12 +479,34 @@ def _make_listnode_handler(
                 "platform": n.platform,
                 "arch": n.arch,
                 "status": n.status,
+                "description": n.description,
+                "agent_version": n.agent_version,
             }
             for n in nodes
         ]
         return json.dumps(result, ensure_ascii=False)
 
     return listnode_handler
+
+
+def _make_setnodedesc_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create setnodedesc tool handler."""
+
+    async def setnodedesc_handler(
+        event: object, node_id: str, description: str
+    ) -> str:
+        enabled, err = _check_enabled(config_getter, event)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        ok = runtime.set_node_description(node_id, description)
+        if not ok:
+            return f"Error: node '{node_id}' not found."
+        return f"OK: description for node '{node_id}' has been saved."
+
+    return setnodedesc_handler
 
 
 def _make_getnodeinfo_handler(
@@ -980,24 +1013,4 @@ def _make_downloadfile_handler(
 
     return downloadfile_handler
 
-
-def _make_sysinfo_handler(
-    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
-):
-    """Create sysinfo tool handler."""
-
-    async def sysinfo_handler(event: object) -> str:
-        enabled, err = _check_enabled(config_getter, event)
-        if not enabled:
-            return err or "Error: spaceship is disabled."
-
-        try:
-            result = await runtime.sysinfo(
-                requested_by=_requested_by_from_event(event),
-            )
-            return result
-        except Exception as exc:
-            return f"Error: {exc}"
-
-    return sysinfo_handler
 

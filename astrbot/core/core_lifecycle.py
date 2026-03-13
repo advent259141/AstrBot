@@ -192,7 +192,9 @@ class AstrBotCoreLifecycle:
         # Dynamic subagents (handoff tools) from config.
         await self._init_or_reload_subagent_orchestrator()
 
-        self.spaceship_runtime = SpaceshipRuntime()
+        self.spaceship_runtime = SpaceshipRuntime(
+            config_getter=lambda: self.astrbot_config.get("spaceship", {})
+        )
 
         # Register spaceship tools directly into the function tool manager
         self._register_spaceship_tools()

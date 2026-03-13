@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+from collections.abc import Callable
 
 from .components import SpaceshipNodeBooter
 from .dispatcher import TaskDispatcher
@@ -35,6 +36,7 @@ from .utils import build_node_from_hello
 class SpaceshipRuntime:
     """Central runtime managing all spaceship operations."""
 
+    config_getter: Callable[[], Any] = field(default=lambda: {})
     nodes: dict[str, SpaceshipNode] = field(default_factory=dict)
     session_hub: SessionHub = field(init=False)
     dispatcher: TaskDispatcher = field(init=False)
@@ -82,6 +84,16 @@ class SpaceshipRuntime:
             payload.get("maintenance_mode", node.maintenance_mode)
         )
         node.last_seen_at = datetime.now(timezone.utc)
+
+        # Restore alias and description from persisted config.
+        cfg = self.config_getter()
+        aliases = cfg.get("node_aliases", {})
+        descriptions = cfg.get("node_descriptions", {})
+        if node_id in aliases:
+            node.alias = str(aliases[node_id])
+        if node_id in descriptions:
+            node.description = str(descriptions[node_id])
+
         return node
 
     async def handle_incoming_event(
@@ -139,6 +151,32 @@ class SpaceshipRuntime:
     def list_nodes(self) -> list[dict[str, Any]]:
         """List all node metadata for dashboard and tool queries."""
         return [asdict(node) for node in self.nodes.values()]
+
+    def set_node_description(self, node_id: str, description: str) -> bool:
+        """Set a node's description and persist to config."""
+        node = self.nodes.get(node_id)
+        if node is None:
+            return False
+        node.description = description
+        cfg = self.config_getter()
+        descs = cfg.setdefault("node_descriptions", {})
+        descs[node_id] = description
+        if hasattr(cfg, "save_config"):
+            cfg.save_config()
+        return True
+
+    def set_node_alias(self, node_id: str, alias: str) -> bool:
+        """Set a node's alias and persist to config."""
+        node = self.nodes.get(node_id)
+        if node is None:
+            return False
+        node.alias = alias
+        cfg = self.config_getter()
+        aliases = cfg.setdefault("node_aliases", {})
+        aliases[node_id] = alias
+        if hasattr(cfg, "save_config"):
+            cfg.save_config()
+        return True
 
     def get_node_booter(self, node_id: str) -> SpaceshipNodeBooter | None:
         """Get a booter instance for a specific node."""
@@ -238,8 +276,4 @@ class SpaceshipRuntime:
         return await self.tool_service.download_file(
             request=request, requested_by=requested_by,
         )
-
-    async def sysinfo(self, requested_by: str) -> str:
-        """Get system information from the currently entered node (tool layer)."""
-        return await self.tool_service.sysinfo(requested_by=requested_by)
 

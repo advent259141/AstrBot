@@ -40,6 +40,7 @@
     "alias": "Node",
     "hostname": "Hostname",
     "platform": "Platform",
+    "description": "Description",
     "status": "Status",
     "scopes": "Scopes",
     "lastSeen": "Last Seen"
@@ -48,7 +49,9 @@
     "loadConfigFailed": "Failed to load config",
     "loadNodesFailed": "Failed to load nodes",
     "saveSuccess": "Saved successfully",
-    "saveFailed": "Failed to save"
+    "saveFailed": "Failed to save",
+    "aliasSaved": "Alias saved",
+    "aliasFailed": "Failed to save alias"
   },
   "empty": {
     "nodes": "No registered nodes yet"
