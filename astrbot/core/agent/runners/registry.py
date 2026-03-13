@@ -107,8 +107,8 @@ class AgentRunnerRegistry:
             from astrbot.core.config.default import (
                 CONFIG_METADATA_2,
                 CONFIG_METADATA_3,
-                DEFAULT_CONFIG,
             )
+            from astrbot.core.config.astrbot_config import AstrBotConfig
 
             # --- CONFIG_METADATA_3: agent_runner dropdown ---
             agent_runner_section = (
@@ -167,11 +167,11 @@ class AgentRunnerRegistry:
                     if field_name not in provider_schema:
                         provider_schema[field_name] = field_def
 
-            # --- DEFAULT_CONFIG: provider_id default value ---
-            # Must exist so config migration doesn't strip the saved value.
-            provider_settings = DEFAULT_CONFIG.get("provider_settings", {})
-            if entry.provider_id_key not in provider_settings:
-                provider_settings[entry.provider_id_key] = ""
+            # --- Dynamic key registration ---
+            # Tell config migration to preserve this key.
+            AstrBotConfig.register_dynamic_key(
+                f"provider_settings.{entry.provider_id_key}"
+            )
 
             # --- CONFIG_METADATA_2: provider config_template ---
             provider_config_template = (
@@ -207,8 +207,8 @@ class AgentRunnerRegistry:
             from astrbot.core.config.default import (
                 CONFIG_METADATA_2,
                 CONFIG_METADATA_3,
-                DEFAULT_CONFIG,
             )
+            from astrbot.core.config.astrbot_config import AstrBotConfig
 
             agent_runner_section = (
                 CONFIG_METADATA_3
@@ -263,9 +263,10 @@ class AgentRunnerRegistry:
             )
             provider_config_template.pop(entry.display_name, None)
 
-            # --- DEFAULT_CONFIG cleanup ---
-            provider_settings = DEFAULT_CONFIG.get("provider_settings", {})
-            provider_settings.pop(entry.provider_id_key, None)
+            # --- Dynamic key unregister ---
+            AstrBotConfig.unregister_dynamic_key(
+                f"provider_settings.{entry.provider_id_key}"
+            )
 
         except Exception:
             logger.warning(
