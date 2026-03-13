@@ -112,8 +112,7 @@ class AgentRunnerRegistry:
 
             # --- CONFIG_METADATA_3: agent_runner dropdown ---
             agent_runner_section = (
-                CONFIG_METADATA_3
-                .get("ai_group", {})
+                CONFIG_METADATA_3.get("ai_group", {})
                 .get("metadata", {})
                 .get("agent_runner", {})
                 .get("items", {})
@@ -143,21 +142,22 @@ class AgentRunnerRegistry:
 
             # --- CONFIG_METADATA_2: provider_settings schema ---
             prov_settings_schema = (
-                CONFIG_METADATA_2
-                .get("provider_group", {})
+                CONFIG_METADATA_2.get("provider_group", {})
                 .get("metadata", {})
                 .get("provider_settings", {})
                 .get("items", {})
             )
-            if prov_settings_schema and entry.provider_id_key not in prov_settings_schema:
+            if (
+                prov_settings_schema
+                and entry.provider_id_key not in prov_settings_schema
+            ):
                 prov_settings_schema[entry.provider_id_key] = {
                     "type": "string",
                 }
 
             # --- CONFIG_METADATA_2: extra provider config fields ---
             provider_schema = (
-                CONFIG_METADATA_2
-                .get("provider_group", {})
+                CONFIG_METADATA_2.get("provider_group", {})
                 .get("metadata", {})
                 .get("provider", {})
                 .get("items", {})
@@ -175,8 +175,7 @@ class AgentRunnerRegistry:
 
             # --- CONFIG_METADATA_2: provider config_template ---
             provider_config_template = (
-                CONFIG_METADATA_2
-                .get("provider_group", {})
+                CONFIG_METADATA_2.get("provider_group", {})
                 .get("metadata", {})
                 .get("provider", {})
                 .get("config_template", {})
@@ -211,8 +210,7 @@ class AgentRunnerRegistry:
             from astrbot.core.config.astrbot_config import AstrBotConfig
 
             agent_runner_section = (
-                CONFIG_METADATA_3
-                .get("ai_group", {})
+                CONFIG_METADATA_3.get("ai_group", {})
                 .get("metadata", {})
                 .get("agent_runner", {})
                 .get("items", {})
@@ -233,8 +231,7 @@ class AgentRunnerRegistry:
             agent_runner_section.pop(prov_id_config_key, None)
 
             prov_settings_schema = (
-                CONFIG_METADATA_2
-                .get("provider_group", {})
+                CONFIG_METADATA_2.get("provider_group", {})
                 .get("metadata", {})
                 .get("provider_settings", {})
                 .get("items", {})
@@ -243,8 +240,7 @@ class AgentRunnerRegistry:
                 prov_settings_schema.pop(entry.provider_id_key, None)
 
             provider_schema = (
-                CONFIG_METADATA_2
-                .get("provider_group", {})
+                CONFIG_METADATA_2.get("provider_group", {})
                 .get("metadata", {})
                 .get("provider", {})
                 .get("items", {})
@@ -255,8 +251,7 @@ class AgentRunnerRegistry:
 
             # --- CONFIG_METADATA_2: config_template cleanup ---
             provider_config_template = (
-                CONFIG_METADATA_2
-                .get("provider_group", {})
+                CONFIG_METADATA_2.get("provider_group", {})
                 .get("metadata", {})
                 .get("provider", {})
                 .get("config_template", {})
