@@ -239,3 +239,7 @@ class SpaceshipRuntime:
             request=request, requested_by=requested_by,
         )
 
+    async def sysinfo(self, requested_by: str) -> str:
+        """Get system information from the currently entered node (tool layer)."""
+        return await self.tool_service.sysinfo(requested_by=requested_by)
+

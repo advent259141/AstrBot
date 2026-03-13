@@ -401,6 +401,14 @@ def register_spaceship_tools(
         handler=_make_downloadfile_handler(runtime, config_getter),
     )
 
+    # sysinfo tool
+    llm_tools.add_func(
+        name="sysinfo",
+        func_args=[],
+        desc="获取当前已进入的 spaceship 节点的系统信息（操作系统、CPU、内存等）；使用前需先调用 enternode",
+        handler=_make_sysinfo_handler(runtime, config_getter),
+    )
+
 def _check_enabled(
     config_getter: Callable[[], dict], event: object = None
 ) -> tuple[bool, str | None]:
@@ -972,4 +980,24 @@ def _make_downloadfile_handler(
 
     return downloadfile_handler
 
+
+def _make_sysinfo_handler(
+    runtime: SpaceshipRuntime, config_getter: Callable[[], dict]
+):
+    """Create sysinfo tool handler."""
+
+    async def sysinfo_handler(event: object) -> str:
+        enabled, err = _check_enabled(config_getter, event)
+        if not enabled:
+            return err or "Error: spaceship is disabled."
+
+        try:
+            result = await runtime.sysinfo(
+                requested_by=_requested_by_from_event(event),
+            )
+            return result
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    return sysinfo_handler
 
