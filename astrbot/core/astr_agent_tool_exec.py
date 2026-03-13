@@ -181,11 +181,13 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             return
 
     # Browser tool names that require the "browser" sandbox capability.
-    _BROWSER_TOOL_NAMES: frozenset[str] = frozenset({
-        "astrbot_execute_browser",
-        "astrbot_execute_browser_batch",
-        "astrbot_run_browser_skill",
-    })
+    _BROWSER_TOOL_NAMES: frozenset[str] = frozenset(
+        {
+            "astrbot_execute_browser",
+            "astrbot_execute_browser_batch",
+            "astrbot_run_browser_skill",
+        }
+    )
 
     @classmethod
     def _check_sandbox_capability(
@@ -215,7 +217,9 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
                 "Please ask the administrator to switch to a sandbox profile with "
                 "browser support, or use shell/python tools instead."
             )
-            logger.warning("[ToolExec] capability_rejected tool=%s caps=%s", tool.name, list(caps))
+            logger.warning(
+                "[ToolExec] capability_rejected tool=%s caps=%s", tool.name, list(caps)
+            )
             return mcp.types.CallToolResult(
                 content=[mcp.types.TextContent(type="text", text=msg)],
                 isError=True,

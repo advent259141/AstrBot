@@ -327,10 +327,7 @@ class CronJobManager:
             context_dump = req._print_friendly_context()
             req.contexts = []
             req.system_prompt += (
-                CONVERSATION_HISTORY_INJECT_PREFIX
-                + f"---\n"
-                  f"{context_dump}\n"
-                  f"---\n"
+                CONVERSATION_HISTORY_INJECT_PREFIX + f"---\n{context_dump}\n---\n"
             )
         cron_job_str = json.dumps(extras.get("cron_job", {}), ensure_ascii=False)
         req.system_prompt += PROACTIVE_AGENT_CRON_WOKE_SYSTEM_PROMPT.format(

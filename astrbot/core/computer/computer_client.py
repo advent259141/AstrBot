@@ -290,7 +290,6 @@ print(
     return _build_python_exec_command(script)
 
 
-
 def _shell_exec_succeeded(result: dict) -> bool:
     if "success" in result:
         return bool(result.get("success"))
