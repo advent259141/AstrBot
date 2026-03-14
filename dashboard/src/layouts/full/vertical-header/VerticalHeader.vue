@@ -148,8 +148,294 @@ async function openDesktopUpdateDialog() {
   desktopUpdateChecking.value = true;
   desktopUpdateInstalling.value = false;
   desktopUpdateHasNewVersion.value = false;
-  // ...
+  desktopUpdateCurrentVersion.value = "-";
+  desktopUpdateLatestVersion.value = "-";
+  desktopUpdateStatus.value = t("core.header.updateDialog.desktopApp.checking");
+
+  const bridge = getAppUpdaterBridge();
+  if (!bridge) {
+    desktopUpdateChecking.value = false;
+    desktopUpdateStatus.value = t(
+      "core.header.updateDialog.desktopApp.checkFailed",
+    );
+    return;
+  }
+
+  try {
+    const result = await bridge.checkForAppUpdate();
+    if (!result?.ok) {
+      desktopUpdateCurrentVersion.value = result?.currentVersion || "-";
+      desktopUpdateLatestVersion.value =
+        result?.latestVersion || result?.currentVersion || "-";
+      desktopUpdateStatus.value =
+        result?.reason || t("core.header.updateDialog.desktopApp.checkFailed");
+      return;
+    }
+
+    desktopUpdateCurrentVersion.value = result.currentVersion || "-";
+    desktopUpdateLatestVersion.value =
+      result.latestVersion || result.currentVersion || "-";
+    desktopUpdateHasNewVersion.value = !!result.hasUpdate;
+    desktopUpdateStatus.value = result.hasUpdate
+      ? t("core.header.updateDialog.desktopApp.hasNewVersion")
+      : t("core.header.updateDialog.desktopApp.isLatest");
+  } catch (error) {
+    console.error(error);
+    desktopUpdateStatus.value = t(
+      "core.header.updateDialog.desktopApp.checkFailed",
+    );
+  } finally {
+    desktopUpdateChecking.value = false;
+  }
 }
+
+async function confirmDesktopUpdate() {
+  if (!desktopUpdateHasNewVersion.value || desktopUpdateInstalling.value) {
+    return;
+  }
+
+  const bridge = getAppUpdaterBridge();
+  if (!bridge) {
+    desktopUpdateStatus.value = t(
+      "core.header.updateDialog.desktopApp.installFailed",
+    );
+    return;
+  }
+
+  desktopUpdateInstalling.value = true;
+  desktopUpdateStatus.value = t(
+    "core.header.updateDialog.desktopApp.installing",
+  );
+
+  try {
+    const result = await bridge.installAppUpdate();
+    if (result?.ok) {
+      desktopUpdateDialog.value = false;
+      return;
+    }
+    desktopUpdateStatus.value =
+      result?.reason || t("core.header.updateDialog.desktopApp.installFailed");
+  } catch (error) {
+    console.error(error);
+    desktopUpdateStatus.value = t(
+      "core.header.updateDialog.desktopApp.installFailed",
+    );
+  } finally {
+    desktopUpdateInstalling.value = false;
+  }
+}
+
+function handleUpdateClick() {
+  if (isDesktopReleaseMode.value) {
+    void openDesktopUpdateDialog();
+    return;
+  }
+  checkUpdate();
+  getReleases();
+  updateStatusDialog.value = true;
+}
+
+// 检测是否为预发布版本
+const isPreRelease = (version: string) => {
+  const preReleaseKeywords = ["alpha", "beta", "rc", "pre", "preview", "dev"];
+  const lowerVersion = version.toLowerCase();
+  return preReleaseKeywords.some((keyword) => lowerVersion.includes(keyword));
+};
+
+// 退出登录
+function handleLogout() {
+  if (confirm(t("core.common.dialog.confirmMessage"))) {
+    authStore.logout();
+  }
+}
+
+// 账户修改
+function accountEdit() {
+  accountEditStatus.value.loading = true;
+  accountEditStatus.value.error = false;
+  accountEditStatus.value.success = false;
+
+  const passwordHash = password.value ? md5(password.value) : "";
+  const newPasswordHash = newPassword.value ? md5(newPassword.value) : "";
+  const confirmPasswordHash = confirmPassword.value
+    ? md5(confirmPassword.value)
+    : "";
+
+  axios
+    .post("/api/auth/account/edit", {
+      password: passwordHash,
+      new_password: newPasswordHash,
+      confirm_password: confirmPasswordHash,
+      new_username: newUsername.value ? newUsername.value : username,
+    })
+    .then((res) => {
+      if (res.data.status == "error") {
+        accountEditStatus.value.error = true;
+        accountEditStatus.value.message = res.data.message;
+        password.value = "";
+        newPassword.value = "";
+        confirmPassword.value = "";
+        return;
+      }
+      accountEditStatus.value.success = true;
+      accountEditStatus.value.message = res.data.message;
+      setTimeout(() => {
+        dialog.value = !dialog.value;
+        const authStore = useAuthStore();
+        authStore.logout();
+      }, 2000);
+    })
+    .catch((err) => {
+      console.log(err);
+      accountEditStatus.value.error = true;
+      accountEditStatus.value.message =
+        typeof err === "string"
+          ? err
+          : t("core.header.accountDialog.messages.updateFailed");
+      password.value = "";
+      newPassword.value = "";
+      confirmPassword.value = "";
+    })
+    .finally(() => {
+      accountEditStatus.value.loading = false;
+    });
+}
+
+function getVersion() {
+  axios
+    .get("/api/stat/version")
+    .then((res) => {
+      botCurrVersion.value = "v" + res.data.data.version;
+      dashboardCurrentVersion.value = res.data.data?.dashboard_version;
+      let change_pwd_hint = res.data.data?.change_pwd_hint;
+      if (change_pwd_hint) {
+        dialog.value = true;
+        accountWarning.value = true;
+        localStorage.setItem("change_pwd_hint", "true");
+      } else {
+        localStorage.removeItem("change_pwd_hint");
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+}
+
+function checkUpdate() {
+  updateStatus.value = t("core.header.updateDialog.status.checking");
+  axios
+    .get("/api/update/check")
+    .then((res) => {
+      hasNewVersion.value = res.data.data.has_new_version;
+
+      if (res.data.data.has_new_version) {
+        releaseMessage.value = res.data.message;
+        updateStatus.value = t("core.header.version.hasNewVersion");
+      } else {
+        updateStatus.value = res.data.message;
+      }
+      dashboardHasNewVersion.value = isDesktopReleaseMode.value
+        ? false
+        : res.data.data.dashboard_has_new_version;
+    })
+    .catch((err) => {
+      if (err.response && err.response.status == 401) {
+        console.log("401");
+        const authStore = useAuthStore();
+        authStore.logout();
+        return;
+      }
+      console.log(err);
+      updateStatus.value = err;
+    });
+}
+
+function getReleases() {
+  return axios
+    .get("/api/update/releases")
+    .then((res) => {
+      releases.value = res.data.data.map((item: any) => {
+        item.published_at = new Date(item.published_at).toLocaleString();
+        return item;
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+}
+
+function switchVersion(version: string) {
+  updateStatus.value = t("core.header.updateDialog.status.switching");
+  installLoading.value = true;
+  axios
+    .post("/api/update/do", {
+      version: version,
+      proxy: getSelectedGitHubProxy(),
+    })
+    .then((res) => {
+      updateStatus.value = res.data.message;
+      if (res.data.status == "ok") {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      updateStatus.value = err;
+    })
+    .finally(() => {
+      installLoading.value = false;
+    });
+}
+
+function updateDashboard() {
+  updatingDashboardLoading.value = true;
+  updateStatus.value = t("core.header.updateDialog.status.updating");
+  axios
+    .post("/api/update/dashboard")
+    .then((res) => {
+      updateStatus.value = res.data.message;
+      if (res.data.status == "ok") {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      updateStatus.value = err;
+    })
+    .finally(() => {
+      updatingDashboardLoading.value = false;
+    });
+}
+
+function toggleDarkMode() {
+  const newTheme =
+    customizer.uiTheme === "PurpleThemeDark"
+      ? "PurpleTheme"
+      : "PurpleThemeDark";
+  customizer.SET_UI_THEME(newTheme);
+  theme.global.name.value = newTheme;
+}
+
+function openReleaseNotesDialog(body: string, tag: string) {
+  selectedReleaseNotes.value = body;
+  selectedReleaseTag.value = tag;
+  releaseNotesDialog.value = true;
+}
+
+function handleLogoClick() {
+  if (customizer.viewMode === "chat") {
+    aboutDialog.value = true;
+  } else {
+    router.push("/about");
+  }
+}
+
+getVersion();
+checkUpdate();
 
 const commonStore = useCommonStore();
 commonStore.createEventSource(); // log
@@ -252,7 +538,795 @@ watch(
         </v-chip>
       </div>
 
-      <StyledMenu :menu="customizer.navbarMenu" />
+      <!-- 功能菜单 -->
+      <StyledMenu offset="12" location="bottom end">
+        <template v-slot:activator="{ props: activatorProps }">
+          <v-btn
+            v-bind="activatorProps"
+            size="small"
+            class="action-btn mr-4"
+            color="var(--v-theme-surface)"
+            variant="flat"
+            rounded="sm"
+            icon
+          >
+            <v-icon>mdi-dots-vertical</v-icon>
+          </v-btn>
+        </template>
+
+        <!-- Bot/Chat 模式切换 - 仅在手机端显示 -->
+        <template v-if="$vuetify.display.xs">
+          <div class="mobile-mode-toggle-wrapper">
+            <v-btn-toggle
+              v-model="viewMode"
+              mandatory
+              variant="outlined"
+              density="compact"
+              color="primary"
+              class="mobile-mode-toggle"
+            >
+              <v-btn value="bot" size="small">
+                <v-icon start>mdi-robot</v-icon>
+                Bot
+              </v-btn>
+              <v-btn value="chat" size="small">
+                <v-icon start>mdi-chat</v-icon>
+                Chat
+              </v-btn>
+            </v-btn-toggle>
+          </div>
+          <v-divider class="my-1" />
+        </template>
+
+        <!-- 语言切换分组 -->
+        <v-menu
+          :open-on-hover="!$vuetify.display.xs"
+          :open-on-click="$vuetify.display.xs"
+          :open-delay="!$vuetify.display.xs ? 60 : 0"
+          :close-delay="!$vuetify.display.xs ? 120 : 0"
+          :location="$vuetify.display.xs ? 'bottom' : 'start center'"
+          offset="8"
+        >
+          <template v-slot:activator="{ props: languageMenuProps }">
+            <v-list-item
+              v-bind="languageMenuProps"
+              class="styled-menu-item language-group-trigger"
+              rounded="md"
+            >
+              <template v-slot:prepend>
+                <v-icon>mdi-translate</v-icon>
+              </template>
+              <v-list-item-title>{{
+                t("core.common.language")
+              }}</v-list-item-title>
+              <template v-slot:append>
+                <span class="language-group-current">{{
+                  currentLanguage?.flag
+                }}</span>
+                <v-icon size="18" class="language-group-arrow"
+                  >mdi-chevron-right</v-icon
+                >
+              </template>
+            </v-list-item>
+          </template>
+
+          <v-card
+            class="styled-menu-card"
+            style="min-width: 180px"
+            elevation="8"
+            rounded="lg"
+          >
+            <v-list density="compact" class="styled-menu-list pa-1">
+              <v-list-item
+                v-for="lang in languages"
+                :key="lang.code"
+                :value="lang.code"
+                @click="changeLanguage(lang.code)"
+                :class="{
+                  'styled-menu-item-active': currentLocale === lang.code,
+                }"
+                class="styled-menu-item"
+                rounded="md"
+              >
+                <template v-slot:prepend>
+                  <span class="language-flag">{{ lang.flag }}</span>
+                </template>
+                <v-list-item-title>{{ lang.name }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-card>
+        </v-menu>
+
+        <!-- 主题切换 -->
+        <v-list-item
+          @click="toggleDarkMode()"
+          class="styled-menu-item"
+          rounded="md"
+        >
+          <template v-slot:prepend>
+            <v-icon>
+              {{
+                useCustomizerStore().uiTheme === "PurpleThemeDark"
+                  ? "mdi-weather-night"
+                  : "mdi-white-balance-sunny"
+              }}
+            </v-icon>
+          </template>
+          <v-list-item-title>
+            {{
+              useCustomizerStore().uiTheme === "PurpleThemeDark"
+                ? t("core.header.buttons.theme.light")
+                : t("core.header.buttons.theme.dark")
+            }}
+          </v-list-item-title>
+        </v-list-item>
+
+        <!-- 更新按钮 -->
+        <v-list-item
+          @click="handleUpdateClick"
+          class="styled-menu-item"
+          rounded="md"
+        >
+          <template v-slot:prepend>
+            <v-icon>mdi-arrow-up-circle</v-icon>
+          </template>
+          <v-list-item-title>{{
+            t("core.header.updateDialog.title")
+          }}</v-list-item-title>
+          <template
+            v-slot:append
+            v-if="
+              hasNewVersion || (dashboardHasNewVersion && !isDesktopReleaseMode)
+            "
+          >
+            <v-chip size="x-small" color="primary" variant="tonal" class="ml-2"
+              >!</v-chip
+            >
+          </template>
+        </v-list-item>
+
+        <!-- 账户按钮 -->
+        <v-list-item
+          @click="dialog = true"
+          class="styled-menu-item"
+          rounded="md"
+        >
+          <template v-slot:prepend>
+            <v-icon>mdi-account</v-icon>
+          </template>
+          <v-list-item-title>{{
+            t("core.header.accountDialog.title")
+          }}</v-list-item-title>
+        </v-list-item>
+
+        <!-- 退出登录 -->
+        <v-list-item
+          @click="handleLogout"
+          class="styled-menu-item"
+          rounded="md"
+        >
+          <template v-slot:prepend>
+            <v-icon>mdi-logout</v-icon>
+          </template>
+          <v-list-item-title>{{
+            t("core.header.buttons.logout")
+          }}</v-list-item-title>
+        </v-list-item>
+      </StyledMenu>
     </v-container>
   </v-app-bar>
+
+  <!-- 更新对话框 -->
+  <v-dialog
+    v-model="updateStatusDialog"
+    :width="$vuetify.display.smAndDown ? '100%' : '1200'"
+    :fullscreen="$vuetify.display.xs"
+  >
+    <v-card>
+      <v-card-title class="mobile-card-title">
+        <span class="text-h5">{{ t("core.header.updateDialog.title") }}</span>
+        <v-btn
+          v-if="$vuetify.display.xs"
+          icon
+          @click="updateStatusDialog = false"
+        >
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-title>
+      <v-card-text>
+        <v-container>
+          <v-progress-linear
+            v-show="installLoading"
+            class="mb-4"
+            indeterminate
+            color="primary"
+          ></v-progress-linear>
+
+          <div>
+            <h1 style="display: inline-block">{{ botCurrVersion }}</h1>
+            <small style="margin-left: 4px">{{ updateStatus }}</small>
+          </div>
+
+          <div
+            v-if="releaseMessage"
+            style="
+              background-color: #646cff24;
+              padding: 16px;
+              border-radius: 10px;
+              font-size: 14px;
+              max-height: 400px;
+              overflow-y: auto;
+            "
+          >
+            <MarkdownRender
+              :content="releaseMessage"
+              :typewriter="false"
+              class="markdown-content"
+            />
+          </div>
+
+          <div class="mb-4 mt-4">
+            <small
+              >{{ t("core.header.updateDialog.tip") }}
+              {{ t("core.header.updateDialog.tipContinue") }}</small
+            >
+          </div>
+
+          <!-- 发行版 -->
+          <div>
+            <div class="mb-4">
+              <small
+                >{{ t("core.header.updateDialog.dockerTip") }}
+                <a href="https://containrrr.dev/watchtower/usage-overview/">{{
+                  t("core.header.updateDialog.dockerTipLink")
+                }}</a>
+                {{ t("core.header.updateDialog.dockerTipContinue") }}</small
+              >
+            </div>
+
+            <v-alert
+              v-if="
+                releases.some((item: any) => isPreRelease(item['tag_name']))
+              "
+              type="warning"
+              variant="tonal"
+              border="start"
+            >
+              <template v-slot:prepend>
+                <v-icon>mdi-alert-circle-outline</v-icon>
+              </template>
+              <div class="text-body-2">
+                <strong>{{
+                  t("core.header.updateDialog.preReleaseWarning.title")
+                }}</strong>
+                <br />
+                {{
+                  t("core.header.updateDialog.preReleaseWarning.description")
+                }}
+                <a
+                  href="https://github.com/AstrBotDevs/AstrBot/issues"
+                  target="_blank"
+                  class="text-decoration-none"
+                >
+                  {{
+                    t("core.header.updateDialog.preReleaseWarning.issueLink")
+                  }}
+                </a>
+              </div>
+            </v-alert>
+
+            <v-data-table
+              :headers="releasesHeader"
+              :items="releases"
+              item-key="name"
+              :items-per-page="8"
+            >
+              <template v-slot:item.tag_name="{ item }: { item: any }">
+                <div class="d-flex align-center">
+                  <span>{{ item.tag_name }}</span>
+                  <v-chip
+                    v-if="isPreRelease(item.tag_name)"
+                    size="x-small"
+                    color="warning"
+                    variant="tonal"
+                    class="ml-2"
+                  >
+                    {{ t("core.header.updateDialog.preRelease") }}
+                  </v-chip>
+                </div>
+              </template>
+              <template
+                v-slot:item.body="{
+                  item,
+                }: {
+                  item: { body: string; tag_name: string };
+                }"
+              >
+                <v-btn
+                  @click="openReleaseNotesDialog(item.body, item.tag_name)"
+                  rounded="xl"
+                  variant="tonal"
+                  color="primary"
+                  size="x-small"
+                  >{{ t("core.header.updateDialog.table.view") }}</v-btn
+                >
+              </template>
+              <template
+                v-slot:item.switch="{ item }: { item: { tag_name: string } }"
+              >
+                <v-btn
+                  @click="switchVersion(item.tag_name)"
+                  rounded="xl"
+                  variant="plain"
+                  color="primary"
+                >
+                  {{ t("core.header.updateDialog.table.switch") }}
+                </v-btn>
+              </template>
+            </v-data-table>
+          </div>
+
+          <v-divider class="mt-4 mb-4"></v-divider>
+          <div style="margin-top: 16px">
+            <h3 class="mb-4">
+              {{ t("core.header.updateDialog.dashboardUpdate.title") }}
+            </h3>
+            <div class="mb-4">
+              <small
+                >{{
+                  t("core.header.updateDialog.dashboardUpdate.currentVersion")
+                }}
+                {{ dashboardCurrentVersion }}</small
+              >
+              <br />
+            </div>
+
+            <div class="mb-4">
+              <p v-if="dashboardHasNewVersion">
+                {{
+                  t("core.header.updateDialog.dashboardUpdate.hasNewVersion")
+                }}
+              </p>
+              <p v-else="dashboardHasNewVersion">
+                {{ t("core.header.updateDialog.dashboardUpdate.isLatest") }}
+              </p>
+            </div>
+
+            <v-btn
+              color="primary"
+              style="border-radius: 10px"
+              @click="updateDashboard()"
+              :disabled="!dashboardHasNewVersion"
+              :loading="updatingDashboardLoading"
+            >
+              {{
+                t("core.header.updateDialog.dashboardUpdate.downloadAndUpdate")
+              }}
+            </v-btn>
+          </div>
+        </v-container>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          color="blue-darken-1"
+          variant="text"
+          @click="updateStatusDialog = false"
+        >
+          {{ t("core.common.close") }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Release Notes Modal -->
+  <v-dialog v-model="releaseNotesDialog" max-width="800">
+    <v-card>
+      <v-card-title class="text-h5">
+        {{ t("core.header.updateDialog.releaseNotes.title") }}:
+        {{ selectedReleaseTag }}
+      </v-card-title>
+      <v-card-text style="font-size: 14px; max-height: 400px; overflow-y: auto">
+        <MarkdownRender
+          :content="selectedReleaseNotes"
+          :typewriter="false"
+          class="markdown-content"
+        />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          color="blue-darken-1"
+          variant="text"
+          @click="releaseNotesDialog = false"
+        >
+          {{ t("core.common.close") }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog v-model="desktopUpdateDialog" max-width="460">
+    <v-card>
+      <v-card-title class="text-h3 pa-4 pl-6 pb-0">
+        {{ t("core.header.updateDialog.desktopApp.title") }}
+      </v-card-title>
+      <v-card-text>
+        <div class="mb-3">
+          {{ t("core.header.updateDialog.desktopApp.message") }}
+        </div>
+        <v-alert type="info" variant="tonal" density="compact">
+          <div>
+            {{ t("core.header.updateDialog.desktopApp.currentVersion") }}
+            <strong>{{ desktopUpdateCurrentVersion }}</strong>
+          </div>
+          <div>
+            {{ t("core.header.updateDialog.desktopApp.latestVersion") }}
+            <strong v-if="!desktopUpdateChecking">{{
+              desktopUpdateLatestVersion
+            }}</strong>
+            <v-progress-circular
+              v-else
+              indeterminate
+              size="16"
+              width="2"
+              class="ml-1"
+            />
+          </div>
+        </v-alert>
+        <div class="text-caption mt-3">
+          {{ desktopUpdateStatus }}
+        </div>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          color="grey"
+          variant="text"
+          @click="cancelDesktopUpdate"
+          :disabled="desktopUpdateInstalling"
+        >
+          {{ t("core.common.dialog.cancelButton") }}
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          @click="confirmDesktopUpdate"
+          :loading="desktopUpdateInstalling"
+          :disabled="
+            desktopUpdateChecking ||
+            desktopUpdateInstalling ||
+            !desktopUpdateHasNewVersion
+          "
+        >
+          {{ t("core.common.dialog.confirmButton") }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- 账户对话框 -->
+  <v-dialog
+    v-model="dialog"
+    persistent
+    :max-width="$vuetify.display.xs ? '90%' : '500'"
+  >
+    <v-card class="account-dialog">
+      <v-card-text class="py-6">
+        <div class="d-flex flex-column align-center mb-6">
+          <Logo
+            :title="t('core.header.logoTitle')"
+            :subtitle="t('core.header.accountDialog.title')"
+          ></Logo>
+        </div>
+        <v-alert
+          v-if="accountWarning"
+          type="warning"
+          variant="tonal"
+          border="start"
+          class="mb-4"
+        >
+          <strong>{{ t("core.header.accountDialog.securityWarning") }}</strong>
+        </v-alert>
+
+        <v-alert
+          v-if="accountEditStatus.success"
+          type="success"
+          variant="tonal"
+          border="start"
+          class="mb-4"
+        >
+          {{ accountEditStatus.message }}
+        </v-alert>
+
+        <v-alert
+          v-if="accountEditStatus.error"
+          type="error"
+          variant="tonal"
+          border="start"
+          class="mb-4"
+        >
+          {{ accountEditStatus.message }}
+        </v-alert>
+
+        <v-form v-model="formValid" @submit.prevent="accountEdit">
+          <v-text-field
+            v-model="password"
+            :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+            :type="showPassword ? 'text' : 'password'"
+            :label="t('core.header.accountDialog.form.currentPassword')"
+            variant="outlined"
+            required
+            clearable
+            @click:append-inner="showPassword = !showPassword"
+            prepend-inner-icon="mdi-lock-outline"
+            hide-details="auto"
+            class="mb-4"
+          ></v-text-field>
+
+          <v-text-field
+            v-model="newPassword"
+            :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
+            :type="showNewPassword ? 'text' : 'password'"
+            :rules="passwordRules"
+            :label="t('core.header.accountDialog.form.newPassword')"
+            variant="outlined"
+            clearable
+            @click:append-inner="showNewPassword = !showNewPassword"
+            prepend-inner-icon="mdi-lock-plus-outline"
+            :hint="t('core.header.accountDialog.form.passwordHint')"
+            persistent-hint
+            class="mb-4"
+          ></v-text-field>
+
+          <v-text-field
+            v-model="confirmPassword"
+            :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
+            :type="showConfirmPassword ? 'text' : 'password'"
+            :rules="confirmPasswordRules"
+            :label="t('core.header.accountDialog.form.confirmPassword')"
+            variant="outlined"
+            clearable
+            @click:append-inner="showConfirmPassword = !showConfirmPassword"
+            prepend-inner-icon="mdi-lock-check-outline"
+            :hint="t('core.header.accountDialog.form.confirmPasswordHint')"
+            persistent-hint
+            class="mb-4"
+          ></v-text-field>
+
+          <v-text-field
+            v-model="newUsername"
+            :rules="usernameRules"
+            :label="t('core.header.accountDialog.form.newUsername')"
+            variant="outlined"
+            clearable
+            prepend-inner-icon="mdi-account-edit-outline"
+            :hint="t('core.header.accountDialog.form.usernameHint')"
+            persistent-hint
+            class="mb-3"
+          ></v-text-field>
+        </v-form>
+
+        <div class="text-caption text-medium-emphasis mt-2">
+          {{ t("core.header.accountDialog.form.defaultCredentials") }}
+        </div>
+      </v-card-text>
+
+      <v-divider></v-divider>
+
+      <v-card-actions class="pa-4">
+        <v-spacer></v-spacer>
+        <v-btn
+          v-if="!accountWarning"
+          variant="tonal"
+          color="secondary"
+          @click="dialog = false"
+          :disabled="accountEditStatus.loading"
+        >
+          {{ t("core.header.accountDialog.actions.cancel") }}
+        </v-btn>
+        <v-btn
+          color="primary"
+          @click="accountEdit"
+          :loading="accountEditStatus.loading"
+          :disabled="!formValid"
+          prepend-icon="mdi-content-save"
+        >
+          {{ t("core.header.accountDialog.actions.save") }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- About 对话框 - 仅在 chat mode 下使用 -->
+  <v-dialog v-model="aboutDialog" width="600">
+    <v-card>
+      <v-card-text style="overflow-y: auto">
+        <AboutPage />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
+
+<style>
+.markdown-content h1 {
+  font-size: 1.3em;
+}
+
+.markdown-content ol {
+  padding-left: 24px;
+  /* Adds indentation to ordered lists */
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.markdown-content ul {
+  padding-left: 24px;
+  /* Adds indentation to unordered lists */
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.account-dialog .v-card-text {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+.account-dialog .v-alert {
+  margin-bottom: 20px;
+}
+
+.account-dialog .v-btn {
+  text-transform: none;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+.account-dialog .v-avatar {
+  transition: transform 0.3s ease;
+}
+
+.account-dialog .v-avatar:hover {
+  transform: scale(1.05);
+}
+
+/* 响应式布局样式 */
+.logo-container {
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.mobile-logo {
+  margin-left: 8px;
+  gap: 4px;
+}
+
+.chat-mode-logo {
+  margin-left: 22px;
+}
+
+.mobile-logo.chat-mode-logo {
+  margin-left: 4px;
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: 1000;
+}
+
+.logo-text-light {
+  font-weight: normal;
+}
+
+.bot-text-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.xmas-hat {
+  position: absolute;
+  top: -3px;
+  right: -14px;
+  width: 24px;
+  height: 24px;
+  z-index: 1;
+}
+
+.version-text {
+  font-size: 12px;
+  color: gray;
+  margin-left: 4px;
+}
+
+.action-btn {
+  margin-right: 6px;
+}
+
+.language-flag {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.language-group-trigger :deep(.v-list-item__append) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.language-group-current {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.language-group-arrow {
+  opacity: 0.7;
+}
+
+.language-submenu-card {
+  min-width: 180px;
+}
+
+.mobile-mode-toggle-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 8px 12px 4px;
+}
+
+.mobile-mode-toggle {
+  width: 100%;
+}
+
+.mobile-mode-toggle .v-btn {
+  flex: 1;
+}
+
+/* 移动端对话框标题样式 */
+.mobile-card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 移动端样式优化 */
+@media (max-width: 600px) {
+  .logo-text {
+    font-size: 20px;
+  }
+
+  .action-btn {
+    margin-right: 4px;
+    min-width: 32px !important;
+    width: 32px;
+  }
+
+  .v-card-title {
+    padding: 12px 16px;
+  }
+
+  .v-card-text {
+    padding: 16px;
+  }
+
+  .v-tabs .v-tab {
+    padding: 0 10px;
+    font-size: 0.9rem;
+  }
+
+  /* 移动端模式切换按钮样式 */
+  .v-btn-toggle {
+    margin-right: 8px;
+  }
+
+  .v-btn-toggle .v-btn {
+    font-size: 0.75rem;
+    padding: 0 8px;
+  }
+
+  .v-btn-toggle .v-icon {
+    font-size: 16px;
+  }
+}
+</style>
