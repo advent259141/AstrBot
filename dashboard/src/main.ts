@@ -11,6 +11,7 @@ import VueApexCharts from "vue3-apexcharts";
 import print from "vue3-print-nb";
 import { loader } from "@guolao/vue-monaco-editor";
 import axios from "axios";
+import { waitForRouterReadyInBackground } from "./utils/routerReadiness.mjs";
 
 // 1. 定义加载配置的函数
 async function loadAppConfig() {
@@ -27,7 +28,12 @@ async function loadAppConfig() {
   }
 }
 
-function mountApp(app: any, pinia: any) {
+async function mountApp(app: any, pinia: any, waitForRouter = true) {
+  if (waitForRouter) {
+    await router.isReady();
+  } else {
+    waitForRouterReadyInBackground(router);
+  }
   app.mount("#app");
 
   // 挂载后同步 Vuetify 主题
@@ -152,7 +158,7 @@ async function initApp() {
       app.use(vuetify);
       app.use(confirmPlugin);
 
-      mountApp(app, pinia);
+      mountApp(app, pinia, true);
     })
     .catch(async (error) => {
       console.error("❌ 新i18n系统初始化失败:", error);
@@ -173,7 +179,7 @@ async function initApp() {
       app.use(vuetify);
       app.use(confirmPlugin);
 
-      mountApp(app, pinia);
+      mountApp(app, pinia, false);
     });
 }
 

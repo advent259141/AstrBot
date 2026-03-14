@@ -5,6 +5,7 @@ import os
 import platform
 import socket
 from collections.abc import Callable
+from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path
 from typing import Protocol
@@ -23,10 +24,14 @@ from astrbot.core.config.default import VERSION
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 from astrbot.core.db import BaseDatabase
 from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+from astrbot.core.utils.datetime_utils import to_utc_isoformat
 from astrbot.core.utils.io import get_local_ip_addresses
 
 from .routes import *
 from .routes.api_key import ALL_OPEN_API_SCOPES
+
+# Static assets shipped inside the wheel (built during `hatch build`).
+_BUNDLED_DIST = Path(__file__).parent / "dist"
 
 
 class _AddrWithPort(Protocol):
@@ -40,6 +45,13 @@ def _parse_env_bool(value: str | None, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+class AstrBotJSONProvider(DefaultJSONProvider):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return to_utc_isoformat(obj)
+        return super().default(obj)
 
 
 class AstrBotDashboard:
@@ -75,10 +87,6 @@ class AstrBotDashboard:
         self._init_plugin_route_index()
         self._init_jwt_secret()
 
-    # ------------------------------------------------------------------
-    # 初始化阶段
-    # ------------------------------------------------------------------
-
     def _check_webui_enabled(self) -> bool:
         cfg = self.config.get("dashboard", {})
         _env = os.environ.get("DASHBOARD_ENABLE")
@@ -87,12 +95,21 @@ class AstrBotDashboard:
         return cfg.get("enable", True)
 
     def _init_paths(self, webui_dir: str | None):
+        # Path priority:
+        # 1. Explicit webui_dir argument
+        # 2. data/dist/ (user-installed / manually updated dashboard)
+        # 3. astrbot/dashboard/dist/ (bundled with the wheel)
         if webui_dir and os.path.exists(webui_dir):
             self.data_path = os.path.abspath(webui_dir)
         else:
-            self.data_path = os.path.abspath(
-                os.path.join(get_astrbot_data_path(), "dist")
-            )
+            user_dist = os.path.join(get_astrbot_data_path(), "dist")
+            if os.path.exists(user_dist):
+                self.data_path = os.path.abspath(user_dist)
+            elif _BUNDLED_DIST.exists():
+                self.data_path = str(_BUNDLED_DIST)
+                logger.info("Using bundled dashboard dist: %s", self.data_path)
+            else:
+                self.data_path = os.path.abspath(user_dist)
 
     def _init_app(self):
         """初始化 Quart 应用"""
@@ -104,7 +121,9 @@ class AstrBotDashboard:
         )
         APP = self.app
         self.app.json_provider_class = DefaultJSONProvider
-        self.app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
+        self.app.config["MAX_CONTENT_LENGTH"] = 128 * 1024 * 1024  # 128MB
+        self.app.json = AstrBotJSONProvider(self.app)
+        self.app.json.sort_keys = False
 
         # 配置 CORS
         self.app = cors(
@@ -208,10 +227,6 @@ class AstrBotDashboard:
             logger.info("Initialized random JWT secret for dashboard.")
         self._jwt_secret = dashboard_cfg["jwt_secret"]
 
-    # ------------------------------------------------------------------
-    # Middleware中间件
-    # ------------------------------------------------------------------
-
     async def auth_middleware(self):
         # 放行CORS预检请求
         if request.method == "OPTIONS":
@@ -278,10 +293,6 @@ class AstrBotDashboard:
         r.status_code = 401
         return r
 
-    # ------------------------------------------------------------------
-    # 插件路由
-    # ------------------------------------------------------------------
-
     async def srv_plug_route(self, subpath: str, *args, **kwargs):
         handler = self._plugin_route_map.get((f"/{subpath}", request.method))
         if not handler:
@@ -326,12 +337,7 @@ class AstrBotDashboard:
         family = socket.AF_INET6 if ":" in host else socket.AF_INET
         try:
             with socket.socket(family, socket.SOCK_STREAM) as s:
-                # 设置 SO_REUSEADDR 避免 TIME_WAIT 导致误判
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                if family == socket.AF_INET6:
-                    # 对于 IPv6，通常需要设置 IPV6_V6ONLY=0 以便同时监听 IPv4 (如果系统支持双栈)
-                    # 但这里主要是检测占用，只要能 bind 就说明没被占
-                    pass
                 s.bind((host, port))
                 return False
         except OSError:
@@ -345,7 +351,7 @@ class AstrBotDashboard:
                     connections = proc.net_connections()
                     for conn in connections:
                         if conn.laddr.port == port:
-                            return f"PID: {proc.info['pid']}, Name: {proc.info['name']}"  # type: ignore
+                            return f"PID: {proc.info['pid']}, Name: {proc.info['name']}"
                 except (
                     psutil.NoSuchProcess,
                     psutil.AccessDenied,
@@ -355,10 +361,6 @@ class AstrBotDashboard:
         except Exception as e:
             return f"获取进程信息失败: {e!s}"
         return "未知进程"
-
-    # ------------------------------------------------------------------
-    # 启动与运行
-    # ------------------------------------------------------------------
 
     async def run(self) -> None:
         """Run dashboard server (blocking)"""
@@ -412,7 +414,6 @@ class AstrBotDashboard:
         # 配置 Hypercorn
         config = HyperConfig()
         binds: list[str] = [self._build_bind(host, port)]
-        # 参考：https://github.com/pgjones/hypercorn/issues/85
         if host == "::" and platform.system() in ("Windows", "Darwin"):
             binds.append(self._build_bind("0.0.0.0", port))
         config.bind = binds

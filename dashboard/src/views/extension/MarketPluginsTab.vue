@@ -1,7 +1,9 @@
 <script setup>
 import MarketPluginCard from "@/components/extension/MarketPluginCard.vue";
+import PluginSortControl from "@/components/extension/PluginSortControl.vue";
 import defaultPluginIcon from "@/assets/images/plugin_icon.png";
 import { computed } from "vue";
+import { normalizeTextInput } from "@/utils/inputValue";
 
 const props = defineProps({
   state: {
@@ -56,7 +58,7 @@ const {
   installCompat,
   versionCompatibilityDialog,
   showUninstallDialog,
-  pluginToUninstall,
+  uninstallTarget,
   showSourceDialog,
   showSourceManagerDialog,
   sourceName,
@@ -78,10 +80,10 @@ const {
   sortBy,
   sortOrder,
   randomPluginNames,
+  showRandomPlugins,
   normalizeStr,
   toPinyinText,
   toInitials,
-  marketCustomFilter,
   plugin_handler_info_headers,
   pluginHeaders,
   filteredExtensions,
@@ -92,6 +94,7 @@ const {
   randomPlugins,
   shufflePlugins,
   refreshRandomPlugins,
+  toggleRandomPluginsVisibility,
   displayItemsPerPage,
   totalPages,
   paginatedPlugins,
@@ -156,42 +159,72 @@ const currentSourceName = computed(() => {
   const matched = customSources.value.find((s) => s.url === selectedSource.value);
   return matched?.name || tm("market.defaultSource");
 });
+
+const marketSortItems = computed(() => [
+  { title: tm("sort.default"), value: "default" },
+  { title: tm("sort.stars"), value: "stars" },
+  { title: tm("sort.author"), value: "author" },
+  { title: tm("sort.updated"), value: "updated" },
+]);
 </script>
 
 <template>
           <v-tab-item v-show="activeTab === 'market'">
             <div class="mb-6 pt-4 pb-4">
-              <div class="d-flex align-center flex-wrap" style="gap: 12px">
-                <h2 class="text-h2 mb-0">{{ tm("tabs.market") }}</h2>
+              <div
+                class="d-flex align-center"
+                style="gap: 12px"
+              >
+                <div class="d-flex align-center" style="gap: 12px; min-width: 0">
+                  <h2 class="text-h2 mb-0">{{ tm("tabs.market") }}</h2>
 
-                <v-tooltip location="top" :text="tm('market.sourceManagement')">
-                  <template v-slot:activator="{ props }">
-                    <v-btn
-                      v-bind="props"
-                      variant="tonal"
-                      rounded="md"
-                      color="primary"
-                      class="text-none px-2"
-                      @click="openSourceManagerDialog"
-                    >
-                      <v-icon size="18" class="mr-1">mdi-source-branch</v-icon>
-                      <span class="text-truncate" style="max-width: 180px">
-                        {{ currentSourceName }}
-                      </span>
-                    </v-btn>
-                  </template>
-                </v-tooltip>
+                  <v-tooltip location="top" :text="tm('market.sourceManagement')">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        variant="tonal"
+                        rounded="md"
+                        color="primary"
+                        class="text-none px-2"
+                        @click="openSourceManagerDialog"
+                      >
+                        <v-icon size="18" class="mr-1">mdi-source-branch</v-icon>
+                        <span class="text-truncate" style="max-width: 180px">
+                          {{ currentSourceName }}
+                        </span>
+                      </v-btn>
+                    </template>
+                  </v-tooltip>
+
+                  <v-btn
+                    color="primary"
+                    variant="tonal"
+                    rounded="md"
+                    class="text-none px-2"
+                    :prepend-icon="showRandomPlugins ? 'mdi-eye-off' : 'mdi-eye'"
+                    @click="toggleRandomPluginsVisibility"
+                  >
+                    {{
+                      showRandomPlugins
+                        ? tm("market.hideRandomPlugins")
+                        : tm("market.showRandomPlugins")
+                    }}
+                  </v-btn>
+                </div>
 
                 <v-text-field
-                  v-model="marketSearch"
+                  :model-value="marketSearch"
+                  @update:model-value="marketSearch = normalizeTextInput($event)"
+                  class="ml-auto"
                   density="compact"
                   :label="tm('search.marketPlaceholder')"
                   prepend-inner-icon="mdi-magnify"
+                  clearable
                   variant="solo-filled"
                   flat
                   hide-details
                   single-line
-                  style="min-width: 220px; max-width: 340px"
+                  style="width: 340px; min-width: 220px; max-width: 340px"
                 >
                 </v-text-field>
               </div>
@@ -237,41 +270,45 @@ const currentSourceName = computed(() => {
             </v-tooltip>
 
             <div class="mt-4">
-              <div
-                class="d-flex align-center mb-2"
-                style="justify-content: space-between; flex-wrap: wrap; gap: 8px"
-              >
-                <h2>
-                  {{ tm("market.randomPlugins") }}
-                </h2>
-                <v-btn
-                  color="primary"
-                  variant="tonal"
-                  prepend-icon="mdi-shuffle-variant"
-                  :disabled="pluginMarketData.length === 0"
-                  @click="refreshRandomPlugins"
-                >
-                  {{ tm("buttons.reshuffle") }}
-                </v-btn>
-              </div>
+              <v-expand-transition>
+                <div v-if="showRandomPlugins">
+                  <div
+                    class="d-flex align-center mb-2"
+                    style="justify-content: space-between; flex-wrap: wrap; gap: 8px"
+                  >
+                    <h2>
+                      {{ tm("market.randomPlugins") }}
+                    </h2>
+                    <v-btn
+                      color="primary"
+                      variant="tonal"
+                      prepend-icon="mdi-shuffle-variant"
+                      :disabled="pluginMarketData.length === 0"
+                      @click="refreshRandomPlugins"
+                    >
+                      {{ tm("buttons.reshuffle") }}
+                    </v-btn>
+                  </div>
 
-              <v-row class="mb-6" dense>
-                <v-col
-                  v-for="plugin in randomPlugins"
-                  :key="`random-${plugin.name}`"
-                  cols="12"
-                  md="6"
-                  lg="4"
-                  class="pb-2"
-                >
-                  <MarketPluginCard
-                    :plugin="plugin"
-                    :default-plugin-icon="defaultPluginIcon"
-                    :show-plugin-full-name="showPluginFullName"
-                    @install="handleInstallPlugin"
-                  />
-                </v-col>
-              </v-row>
+                  <v-row class="mb-6" dense>
+                    <v-col
+                      v-for="plugin in randomPlugins"
+                      :key="`random-${plugin.name}`"
+                      cols="12"
+                      md="6"
+                      lg="4"
+                      class="pb-2"
+                    >
+                      <MarketPluginCard
+                        :plugin="plugin"
+                        :default-plugin-icon="defaultPluginIcon"
+                        :show-plugin-full-name="showPluginFullName"
+                        @install="handleInstallPlugin"
+                      />
+                    </v-col>
+                  </v-row>
+                </div>
+              </v-expand-transition>
 
               <div
                 class="d-flex align-center mb-2"
@@ -301,44 +338,16 @@ const currentSourceName = computed(() => {
                   class="d-flex align-center"
                   style="gap: 8px; flex-wrap: wrap"
                 >
-                  <v-select
+                  <PluginSortControl
                     v-model="sortBy"
-                    :items="[
-                      { title: tm('sort.default'), value: 'default' },
-                      { title: tm('sort.stars'), value: 'stars' },
-                      { title: tm('sort.author'), value: 'author' },
-                      { title: tm('sort.updated'), value: 'updated' },
-                    ]"
-                    density="compact"
-                    variant="outlined"
-                    hide-details
-                    style="max-width: 150px"
-                  >
-                    <template v-slot:prepend-inner>
-                      <v-icon size="small">mdi-sort</v-icon>
-                    </template>
-                  </v-select>
-
-                  <v-btn
-                    icon
-                    v-if="sortBy !== 'default'"
-                    @click="sortOrder = sortOrder === 'desc' ? 'asc' : 'desc'"
-                    variant="text"
-                    density="compact"
-                  >
-                    <v-icon>{{
-                      sortOrder === "desc"
-                        ? "mdi-sort-descending"
-                        : "mdi-sort-ascending"
-                    }}</v-icon>
-                    <v-tooltip activator="parent" location="top">
-                      {{
-                        sortOrder === "desc"
-                          ? tm("sort.descending")
-                          : tm("sort.ascending")
-                      }}
-                    </v-tooltip>
-                  </v-btn>
+                    :items="marketSortItems"
+                    :label="tm('sort.by')"
+                    :order="sortOrder"
+                    :ascending-label="tm('sort.ascending')"
+                    :descending-label="tm('sort.descending')"
+                    :show-order="sortBy !== 'default'"
+                    @update:order="sortOrder = $event"
+                  />
                 </div>
               </div>
 
