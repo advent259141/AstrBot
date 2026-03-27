@@ -30,14 +30,14 @@ class AgentRunnerEntry:
     """Descriptor for a plugin-provided agent runner."""
 
     runner_type: str
-    """Unique identifier used in ``agent_runner_type`` config, e.g. ``"maibot"``."""
+    """Unique identifier used in ``agent_runner_type`` config, e.g. ``"my_runner"``."""
 
     runner_cls: type[BaseAgentRunner]
     """Concrete ``BaseAgentRunner`` subclass to instantiate."""
 
     provider_id_key: str
     """Config key that stores the selected provider ID,
-    e.g. ``"maibot_agent_runner_provider_id"``."""
+    e.g. ``"my_runner_agent_runner_provider_id"``."""
 
     display_name: str
     """Human-readable label shown in the WebUI dropdown."""
@@ -53,7 +53,7 @@ class AgentRunnerEntry:
     provider_config_fields: dict[str, dict[str, Any]] = field(default_factory=dict)
     """Extra provider config field definitions to inject into
     CONFIG_METADATA_2, keyed by field name.
-    e.g. ``{"maibot_ws_url": {"description": "MaiBot WebSocket URL", "type": "string", ...}}``
+    e.g. ``{"my_api_url": {"description": "API URL", "type": "string", ...}}``
     """
 
 

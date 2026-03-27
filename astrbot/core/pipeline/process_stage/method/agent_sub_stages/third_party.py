@@ -32,6 +32,7 @@ from astrbot.core.persona_error_reply import (
 
 if TYPE_CHECKING:
     from astrbot.core.agent.runners.base import BaseAgentRunner
+    from astrbot.core.agent.runners.registry import AgentRunnerEntry
     from astrbot.core.provider.entities import LLMResponse
 from astrbot.core.pipeline.stage import Stage
 from astrbot.core.platform.astr_message_event import AstrMessageEvent
@@ -199,7 +200,7 @@ class ThirdPartyAgentSubStage(Stage):
         if registry_entry and registry_entry.on_initialize and self.prov_id:
             asyncio.create_task(self._run_registry_on_initialize(registry_entry))
 
-    async def _run_registry_on_initialize(self, entry) -> None:
+    async def _run_registry_on_initialize(self, entry: "AgentRunnerEntry") -> None:
         """Run the on_initialize callback for a plugin-registered runner."""
         try:
             await entry.on_initialize(self.ctx, self.prov_id)

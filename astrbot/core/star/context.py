@@ -603,10 +603,10 @@ class Context:
             from astrbot.core.agent.runners.registry import AgentRunnerEntry
 
             context.register_agent_runner(AgentRunnerEntry(
-                runner_type="maibot",
-                runner_cls=MaiBotAgentRunner,
-                provider_id_key="maibot_agent_runner_provider_id",
-                display_name="MaiBot",
+                runner_type="my_runner",
+                runner_cls=MyCustomAgentRunner,
+                provider_id_key="my_runner_agent_runner_provider_id",
+                display_name="My Runner",
             ))
         """
         from astrbot.core.agent.runners.registry import agent_runner_registry
