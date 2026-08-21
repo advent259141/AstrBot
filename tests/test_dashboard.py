@@ -517,9 +517,10 @@ async def test_desktop_session_issues_jwt_without_password(
 
     assert response.status_code == 200
     assert data["status"] == "ok"
-    assert data["data"]["username"] == core_lifecycle_td.astrbot_config[
-        "dashboard"
-    ]["username"]
+    assert (
+        data["data"]["username"]
+        == core_lifecycle_td.astrbot_config["dashboard"]["username"]
+    )
     token = data["data"]["token"]
     payload = jwt.decode(
         token,
@@ -2390,6 +2391,55 @@ async def test_subagent_config_accepts_default_persona(
             json=old_cfg,
             headers=authenticated_header,
         )
+
+
+@pytest.mark.asyncio
+async def test_subagent_config_save_preserves_unsubmitted_fields(
+    app: FastAPIAppAdapter,
+    authenticated_header: dict,
+    core_lifecycle_td: AstrBotCoreLifecycle,
+):
+    """The WebUI only submits the fields it renders; the rest must survive.
+
+    `router_system_prompt` has no form control, so a full replace would drop it.
+    """
+    test_client = app.test_client()
+    old_cfg = copy.deepcopy(
+        core_lifecycle_td.astrbot_config.get("subagent_orchestrator", {})
+    )
+    custom_prompt = "You are a bespoke router."
+
+    try:
+        seed = await test_client.post(
+            "/api/subagent/config",
+            json={**old_cfg, "router_system_prompt": custom_prompt},
+            headers=authenticated_header,
+        )
+        assert seed.status_code == 200
+
+        # A WebUI-shaped save that omits router_system_prompt entirely.
+        response = await test_client.post(
+            "/api/subagent/config",
+            json={
+                "main_enable": True,
+                "remove_main_duplicate_tools": False,
+                "agents": [],
+            },
+            headers=authenticated_header,
+        )
+        assert response.status_code == 200
+
+        stored = core_lifecycle_td.astrbot_config["subagent_orchestrator"]
+        assert stored["router_system_prompt"] == custom_prompt
+        assert stored["main_enable"] is True
+
+        get_data = await (
+            await test_client.get("/api/subagent/config", headers=authenticated_header)
+        ).get_json()
+        assert get_data["data"]["router_system_prompt"] == custom_prompt
+    finally:
+        core_lifecycle_td.astrbot_config["subagent_orchestrator"] = old_cfg
+        core_lifecycle_td.astrbot_config.save_config()
 
 
 @pytest.mark.asyncio

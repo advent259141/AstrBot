@@ -3,6 +3,7 @@
 import datetime
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -176,9 +177,12 @@ def test_append_system_reminders_includes_weekday(mock_event):
 
 
 def test_local_mode_prompt_uses_windows_powershell_51():
-    with patch("astrbot.core.astr_main_agent.platform.system", return_value="Windows"), patch(
-        "astrbot.core.astr_main_agent.resolve_windows_shell",
-        return_value="powershell.exe",
+    with (
+        patch("astrbot.core.astr_main_agent.platform.system", return_value="Windows"),
+        patch(
+            "astrbot.core.astr_main_agent.resolve_windows_shell",
+            return_value="powershell.exe",
+        ),
     ):
         prompt = ama._build_local_mode_prompt()
 
@@ -188,9 +192,12 @@ def test_local_mode_prompt_uses_windows_powershell_51():
 
 
 def test_local_mode_prompt_hints_pwsh_when_resolved():
-    with patch("astrbot.core.astr_main_agent.platform.system", return_value="Windows"), patch(
-        "astrbot.core.astr_main_agent.resolve_windows_shell",
-        return_value="pwsh.exe",
+    with (
+        patch("astrbot.core.astr_main_agent.platform.system", return_value="Windows"),
+        patch(
+            "astrbot.core.astr_main_agent.resolve_windows_shell",
+            return_value="pwsh.exe",
+        ),
     ):
         prompt = ama._build_local_mode_prompt()
 
@@ -200,9 +207,12 @@ def test_local_mode_prompt_hints_pwsh_when_resolved():
 
 
 def test_local_mode_prompt_ignores_pwsh_on_non_windows():
-    with patch("astrbot.core.astr_main_agent.platform.system", return_value="Linux"), patch(
-        "astrbot.core.astr_main_agent.resolve_windows_shell",
-        return_value="pwsh.exe",
+    with (
+        patch("astrbot.core.astr_main_agent.platform.system", return_value="Linux"),
+        patch(
+            "astrbot.core.astr_main_agent.resolve_windows_shell",
+            return_value="pwsh.exe",
+        ),
     ):
         prompt = ama._build_local_mode_prompt()
 
@@ -1287,7 +1297,11 @@ class TestEnsurePersonaAndSkills:
 
         handoff = MagicMock()
         handoff.name = "transfer_to_planner"
-        mock_context.subagent_orchestrator = MagicMock(handoffs=[handoff])
+        # `agent.tools` is the persona-resolved toolset the orchestrator built.
+        handoff.agent = SimpleNamespace(tools=["tool_a"])
+        orchestrator = MagicMock()
+        orchestrator.get_handoffs.return_value = [handoff]
+        mock_context.subagent_orchestrator = orchestrator
         mock_context.get_config.return_value = {
             "subagent_orchestrator": {
                 "main_enable": True,

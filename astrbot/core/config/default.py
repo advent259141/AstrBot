@@ -203,6 +203,11 @@ DEFAULT_CONFIG = {
     "subagent_orchestrator": {
         "main_enable": False,
         "remove_main_duplicate_tools": False,
+        # Wall-clock budget (seconds) for one synchronous handoff. A subagent
+        # runs a full tool loop, so this is deliberately much larger than
+        # provider_settings.tool_call_timeout (which bounds the subagent's own
+        # inner tool calls). <= 0 disables the bound.
+        "handoff_timeout": 600,
         "router_system_prompt": (
             "You are a task router. Your job is to chat naturally, recognize user intent, "
             "and delegate work to the most suitable subagent using transfer_to_* tools. "

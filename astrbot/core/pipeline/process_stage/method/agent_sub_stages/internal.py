@@ -149,7 +149,6 @@ class InternalAgentSubStage(Stage):
             sandbox_cfg=self.sandbox_cfg,
             add_cron_tools=self.add_cron_tools,
             provider_settings=settings,
-            subagent_orchestrator=conf.get("subagent_orchestrator", {}),
             timezone=self.ctx.plugin_manager.context.get_config().get("timezone"),
             max_quoted_fallback_images=settings.get("max_quoted_fallback_images", 20),
         )

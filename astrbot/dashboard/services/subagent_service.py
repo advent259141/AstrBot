@@ -4,6 +4,7 @@ import traceback
 
 from astrbot.core import logger
 from astrbot.core.agent.handoff import HandoffTool
+from astrbot.core.config.default import DEFAULT_CONFIG
 from astrbot.core.core_lifecycle import AstrBotCoreLifecycle
 
 
@@ -31,12 +32,20 @@ class SubAgentService:
                 raise SubAgentServiceError("配置必须为 JSON 对象")
 
             config = self.core_lifecycle.astrbot_config
-            config["subagent_orchestrator"] = data
+            # Merge onto the stored config instead of replacing it: the WebUI
+            # only submits the fields it renders, and a full replace silently
+            # drops everything else (e.g. `router_system_prompt`, which has no
+            # form control and would be reset to its default on next startup).
+            existing = config.get("subagent_orchestrator")
+            merged = dict(existing) if isinstance(existing, dict) else {}
+            merged.update(data)
+
+            config["subagent_orchestrator"] = merged
             config.save_config()
 
             orchestrator = getattr(self.core_lifecycle, "subagent_orchestrator", None)
             if orchestrator is not None:
-                await orchestrator.reload_from_config(data)
+                await orchestrator.reload_from_config(merged)
         except SubAgentServiceError:
             raise
         except Exception as exc:
@@ -76,8 +85,13 @@ class SubAgentService:
         if "main_enable" not in data and "enable" in data:
             data["main_enable"] = bool(data.get("enable", False))
 
+        defaults = DEFAULT_CONFIG.get("subagent_orchestrator", {})
         data.setdefault("main_enable", False)
         data.setdefault("remove_main_duplicate_tools", False)
+        data.setdefault(
+            "router_system_prompt", defaults.get("router_system_prompt", "")
+        )
+        data.setdefault("handoff_timeout", defaults.get("handoff_timeout", 600))
         data.setdefault("agents", [])
 
         agents = data.get("agents")
@@ -89,9 +103,15 @@ class SubAgentService:
 
         return data
 
-    @staticmethod
-    def _is_subagent_internal_tool(tool) -> bool:
-        return (
-            isinstance(tool, HandoffTool)
-            or tool.handler_module_path == "core.subagent_orchestrator"
-        )
+    def _is_subagent_internal_tool(self, tool) -> bool:
+        if isinstance(tool, HandoffTool):
+            return True
+        if tool.handler_module_path == "core.subagent_orchestrator":
+            return True
+        # Handoff tools are mounted per-request rather than registered, so an
+        # isinstance check alone can miss them; compare against the names the
+        # orchestrator currently exposes.
+        orchestrator = getattr(self.core_lifecycle, "subagent_orchestrator", None)
+        if orchestrator is None:
+            return False
+        return tool.name in {handoff.name for handoff in orchestrator.handoffs}

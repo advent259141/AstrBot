@@ -266,17 +266,20 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
             provider_settings.get("sandbox", {}).get("booter"),
         )
 
+        # Names of every handoff tool, so a subagent can never be handed another
+        # subagent. Handoff tools normally live only on the orchestrator (they
+        # are mounted per-request onto the main agent rather than registered in
+        # the tool manager), so the tool manager alone is not a complete source.
+        handoff_names = cls._collect_handoff_names(ctx, cfg, tool_mgr)
+
         # Keep persona semantics aligned with the main agent: tools=None means
         # "all tools", including runtime computer-use tools.
         if tools is None:
             toolset = ToolSet()
-            handoff_names = {
-                tool.name
-                for tool in tool_mgr.func_list
-                if isinstance(tool, HandoffTool)
-            }
             for registered_tool in tool_mgr.get_full_tool_set():
-                if registered_tool.name in handoff_names:
+                if registered_tool.name in handoff_names or isinstance(
+                    registered_tool, HandoffTool
+                ):
                     continue
                 if registered_tool.active:
                     toolset.add_tool(registered_tool)
@@ -290,6 +293,13 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
         toolset = ToolSet()
         for tool_name_or_obj in tools:
             if isinstance(tool_name_or_obj, str):
+                if tool_name_or_obj in handoff_names:
+                    logger.warning(
+                        "Subagent tool %r refers to a handoff tool; nested "
+                        "delegation is not supported and it will be ignored.",
+                        tool_name_or_obj,
+                    )
+                    continue
                 registered_tool = llm_tools.get_func(tool_name_or_obj)
                 if registered_tool and registered_tool.active:
                     toolset.add_tool(registered_tool)
@@ -297,9 +307,38 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
                 runtime_tool = runtime_computer_tools.get(tool_name_or_obj)
                 if runtime_tool:
                     toolset.add_tool(runtime_tool)
+            elif isinstance(tool_name_or_obj, HandoffTool):
+                logger.warning(
+                    "Subagent tool %r is a handoff tool; nested delegation is "
+                    "not supported and it will be ignored.",
+                    tool_name_or_obj.name,
+                )
             elif isinstance(tool_name_or_obj, FunctionTool):
                 toolset.add_tool(tool_name_or_obj)
         return None if toolset.empty() else toolset
+
+    @classmethod
+    def _collect_handoff_names(cls, ctx, cfg: dict, tool_mgr) -> set[str]:
+        """Names of all handoff tools reachable from this session's config.
+
+        Match by name rather than by type: ``get_full_tool_set()`` may hand back
+        permission-guarded wrappers, for which ``isinstance`` no longer holds.
+        """
+        names: set[str] = {
+            tool.name
+            for tool in getattr(tool_mgr, "func_list", [])
+            if isinstance(tool, HandoffTool)
+        }
+        orchestrator = getattr(ctx, "subagent_orchestrator", None)
+        if orchestrator is None:
+            return names
+        try:
+            orch_cfg = cfg.get("subagent_orchestrator", {}) or {}
+            names.update(h.name for h in orchestrator.get_handoffs(orch_cfg))
+            names.update(h.name for h in orchestrator.handoffs)
+        except Exception:  # noqa: BLE001 - defensive: never block tool building
+            logger.debug("Failed to collect handoff names.", exc_info=True)
+        return names
 
     @classmethod
     async def _execute_handoff(
@@ -357,21 +396,62 @@ class FunctionToolExecutor(BaseFunctionToolExecutor[AstrAgentContext]):
                 except Exception:
                     continue
 
-        prov_settings: dict = ctx.get_config(umo=umo).get("provider_settings", {})
+        session_cfg = ctx.get_config(umo=umo)
+        prov_settings: dict = session_cfg.get("provider_settings", {})
         agent_max_step = int(prov_settings.get("max_agent_step", 30))
         stream = prov_settings.get("streaming_response", False)
-        llm_resp = await ctx.tool_loop_agent(
-            event=event,
-            chat_provider_id=prov_id,
-            prompt=input_,
-            image_urls=image_urls,
-            system_prompt=tool.agent.instructions,
-            tools=toolset,
-            contexts=contexts,
-            max_steps=agent_max_step,
-            tool_call_timeout=run_context.tool_call_timeout,
-            stream=stream,
-        )
+
+        # A handoff runs a whole nested tool loop, so `tool_call_timeout` (which
+        # only bounds each of the subagent's own tool calls) leaves the caller
+        # unbounded. Cap the delegation itself so a stuck subagent cannot block
+        # the main agent forever.
+        orch_cfg = session_cfg.get("subagent_orchestrator", {}) or {}
+        try:
+            handoff_timeout = int(orch_cfg.get("handoff_timeout", 600))
+        except (TypeError, ValueError):
+            handoff_timeout = 600
+
+        async def _run() -> T.Any:
+            return await ctx.tool_loop_agent(
+                event=event,
+                chat_provider_id=prov_id,
+                prompt=input_,
+                image_urls=image_urls,
+                system_prompt=tool.agent.instructions,
+                tools=toolset,
+                contexts=contexts,
+                max_steps=agent_max_step,
+                tool_call_timeout=run_context.tool_call_timeout,
+                stream=stream,
+            )
+
+        try:
+            if handoff_timeout > 0:
+                async with asyncio.timeout(handoff_timeout):
+                    llm_resp = await _run()
+            else:
+                llm_resp = await _run()
+        except TimeoutError:
+            logger.warning(
+                "Handoff to subagent '%s' timed out after %ds.",
+                tool.agent.name,
+                handoff_timeout,
+            )
+            yield mcp.types.CallToolResult(
+                content=[
+                    mcp.types.TextContent(
+                        type="text",
+                        text=(
+                            f"error: subagent '{tool.agent.name}' did not finish "
+                            f"within {handoff_timeout} seconds and was cancelled. "
+                            f"Consider retrying with background_task=true, or "
+                            f"handling the request without delegating."
+                        ),
+                    )
+                ]
+            )
+            return
+
         yield mcp.types.CallToolResult(
             content=[mcp.types.TextContent(type="text", text=llm_resp.completion_text)]
         )

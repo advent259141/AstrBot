@@ -108,3 +108,77 @@ async def test_reload_from_config_tool_normalization(raw_tools, expected_tools):
 
     handoff = orchestrator.handoffs[0]
     assert handoff.agent.tools == expected_tools
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "bad_name",
+    ["Planner", "1planner", "my planner", "planner-x", "a" * 65, ""],
+)
+async def test_reload_from_config_skips_invalid_names(bad_name):
+    tool_mgr = MagicMock()
+    persona_mgr = MagicMock()
+    persona_mgr.get_persona_v3_by_id.return_value = None
+    orchestrator = SubAgentOrchestrator(tool_mgr=tool_mgr, persona_mgr=persona_mgr)
+
+    await orchestrator.reload_from_config(_build_cfg({"name": bad_name}))
+
+    assert orchestrator.handoffs == []
+
+
+@pytest.mark.asyncio
+async def test_reload_from_config_skips_duplicate_names():
+    tool_mgr = MagicMock()
+    persona_mgr = MagicMock()
+    persona_mgr.get_persona_v3_by_id.return_value = None
+    orchestrator = SubAgentOrchestrator(tool_mgr=tool_mgr, persona_mgr=persona_mgr)
+
+    cfg = {
+        "agents": [
+            {"name": "planner", "system_prompt": "first"},
+            {"name": "planner", "system_prompt": "second"},
+        ]
+    }
+    with patch("astrbot.core.subagent_orchestrator.logger") as mock_logger:
+        await orchestrator.reload_from_config(cfg)
+
+    assert len(orchestrator.handoffs) == 1
+    assert orchestrator.handoffs[0].agent.instructions == "first"
+    assert mock_logger.warning.called
+
+
+@pytest.mark.asyncio
+async def test_get_handoffs_resolves_per_config_and_caches():
+    tool_mgr = MagicMock()
+    persona_mgr = MagicMock()
+    persona_mgr.get_persona_v3_by_id.return_value = None
+    orchestrator = SubAgentOrchestrator(tool_mgr=tool_mgr, persona_mgr=persona_mgr)
+
+    global_cfg = _build_cfg({"name": "planner"})
+    await orchestrator.reload_from_config(global_cfg)
+
+    # A different (e.g. session-scoped) config resolves its own subagents.
+    session_cfg = _build_cfg({"name": "researcher"})
+    session_handoffs = orchestrator.get_handoffs(session_cfg)
+    assert [h.name for h in session_handoffs] == ["transfer_to_researcher"]
+    assert [h.name for h in orchestrator.handoffs] == ["transfer_to_planner"]
+
+    # Same config object -> cached, identical instances.
+    assert orchestrator.get_handoffs(session_cfg) is session_handoffs
+    # The global config was primed by reload_from_config.
+    assert orchestrator.get_handoffs(global_cfg) is orchestrator.handoffs
+
+
+@pytest.mark.asyncio
+async def test_reload_from_config_clears_stale_cache():
+    tool_mgr = MagicMock()
+    persona_mgr = MagicMock()
+    persona_mgr.get_persona_v3_by_id.return_value = None
+    orchestrator = SubAgentOrchestrator(tool_mgr=tool_mgr, persona_mgr=persona_mgr)
+
+    cfg = _build_cfg({"name": "planner"})
+    first = orchestrator.get_handoffs(cfg)
+    await orchestrator.reload_from_config(cfg)
+
+    # Personas may have changed under us, so a reload must not serve the old build.
+    assert orchestrator.get_handoffs(cfg) is not first

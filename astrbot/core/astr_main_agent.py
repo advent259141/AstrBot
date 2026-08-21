@@ -209,7 +209,6 @@ class MainAgentBuildConfig:
     add_cron_tools: bool = True
     """This will add cron job management tools to the main agent for proactive cron job execution."""
     provider_settings: dict = field(default_factory=dict)
-    subagent_orchestrator: dict = field(default_factory=dict)
     timezone: str | None = None
     max_quoted_fallback_images: int = 20
     """Maximum number of images injected from quoted-message fallback extraction."""
@@ -617,64 +616,56 @@ async def _ensure_persona_and_skills(
         req.func_tool.merge(persona_toolset)
 
     # sub agents integration
-    orch_cfg = plugin_context.get_config().get("subagent_orchestrator", {})
+    # Read with the session's scope so a per-session config profile resolves its
+    # own subagents, consistent with how the rest of the request reads config.
+    orch_cfg = plugin_context.get_config(umo=event.unified_msg_origin).get(
+        "subagent_orchestrator", {}
+    )
     so = plugin_context.subagent_orchestrator
     if orch_cfg.get("main_enable", False) and so:
+        # Resolve the handoff set from the same config we route with, so the
+        # duplicate-removal bookkeeping below cannot disagree with the tools
+        # actually mounted.
+        handoffs = so.get_handoffs(orch_cfg)
         remove_dup = bool(orch_cfg.get("remove_main_duplicate_tools", False))
 
+        # Derive the assigned toolset from the handoffs we actually mounted.
+        # `HandoffTool.agent.tools` is already persona-resolved and validated, so
+        # a subagent that was skipped (invalid/duplicate name) cannot strip tools
+        # off the main agent.
         assigned_tools: set[str] = set()
-        agents = orch_cfg.get("agents", [])
-        if isinstance(agents, list):
-            for a in agents:
-                if not isinstance(a, dict):
-                    continue
-                if a.get("enabled", True) is False:
-                    continue
-                persona_tools = None
-                pid = a.get("persona_id")
-                if pid:
-                    persona = plugin_context.persona_manager.get_persona_v3_by_id(pid)
-                    if persona is not None:
-                        persona_tools = persona.get("tools")
-                tools = a.get("tools", [])
-                if persona_tools is not None:
-                    tools = persona_tools
-                if tools is None:
-                    assigned_tools.update(
-                        [
-                            tool.name
-                            for tool in tmgr.func_list
-                            if not isinstance(tool, HandoffTool)
-                        ]
-                    )
-                    continue
-                if not isinstance(tools, list):
-                    continue
-                for t in tools:
-                    name = str(t).strip()
-                    if name:
-                        assigned_tools.add(name)
+        for handoff in handoffs:
+            agent_tools = handoff.agent.tools
+            if agent_tools is None:
+                # None means "every tool", matching persona semantics.
+                assigned_tools.update(
+                    tool.name
+                    for tool in tmgr.func_list
+                    if not isinstance(tool, HandoffTool)
+                )
+                continue
+            for t in agent_tools:
+                name = t if isinstance(t, str) else getattr(t, "name", "")
+                name = str(name).strip()
+                if name:
+                    assigned_tools.add(name)
 
         if req.func_tool is None:
             req.func_tool = ToolSet()
 
         # add subagent handoff tools
-        for tool in so.handoffs:
+        for tool in handoffs:
             req.func_tool.add_tool(tool)
 
         # check duplicates
         if remove_dup:
-            handoff_names = {tool.name for tool in so.handoffs}
+            handoff_names = {tool.name for tool in handoffs}
             for tool_name in assigned_tools:
                 if tool_name in handoff_names:
                     continue
                 req.func_tool.remove_tool(tool_name)
 
-        router_prompt = (
-            plugin_context.get_config()
-            .get("subagent_orchestrator", {})
-            .get("router_system_prompt", "")
-        ).strip()
+        router_prompt = str(orch_cfg.get("router_system_prompt", "") or "").strip()
         if router_prompt:
             req.system_prompt += f"\n{router_prompt}\n"
     try:
