@@ -345,6 +345,9 @@
         },
         "runtimeUnknown": "运行环境信息不可用。",
         "memberWarning": "普通成员已获得联网或整个环境访问权限。",
+        "executionInactive": "未生效",
+        "executionInactiveHelp": "查看未生效原因",
+        "executionBlocked": "{role}已开启代码执行，但当前无法满足所配置的隔离限制。原因：{reason}",
         "runtime": {
           "os": "操作系统",
           "arch": "架构",
@@ -360,6 +363,11 @@
             "missing": "安装 {dependency} 以获得完整的本地隔离功能。",
             "unavailable": "配置 {backend}，启用完整的本地隔离功能。",
             "unsupported": "了解本地隔离支持情况。"
+          },
+          "isolationFailure": {
+            "missing": "缺少 {dependency}。",
+            "unavailable": "{backend} 启动探测失败。",
+            "unsupported": "当前系统不支持本地进程隔离。"
           },
           "executionUnavailable": {
             "missing": "缺少 {dependency}，无法在“文件访问范围”选择“工作区”时允许执行代码。",

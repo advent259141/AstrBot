@@ -148,7 +148,7 @@ async def test_local_execute_shell_manages_running_and_closed_results(
                 "provider_settings": {
                     "computer_use_runtime": "local",
                     "computer_use_local_permissions": {
-                        "admin": {"allow_network": allow_network}
+                        "admin": {"allow_network": allow_network, "filesystem_scope": "workspace"}
                     },
                 }
             }
@@ -349,7 +349,9 @@ async def test_local_member_shell_uses_sandbox_backend(
     async def fake_get_booter(context, session_id):
         return booter
 
-    monkeypatch.setattr(computer_util, "create_process_sandbox", object)
+    monkeypatch.setattr(
+        computer_util, "get_process_sandbox_status", lambda: {"status": "detected"}
+    )
     monkeypatch.setattr(shell_tools, "get_booter", fake_get_booter)
     monkeypatch.setattr(
         shell_tools,
@@ -414,14 +416,19 @@ async def test_local_member_shell_is_denied_without_supported_sandbox(monkeypatc
         },
     )()
 
-    def unavailable_sandbox():
-        raise RuntimeError("No Local process sandbox backend is available.")
-
-    monkeypatch.setattr(computer_util, "create_process_sandbox", unavailable_sandbox)
+    monkeypatch.setattr(
+        computer_util, "get_process_sandbox_status", lambda: {"status": "unsupported"}
+    )
 
     result = await LocalExecuteShellTool().call(wrapper, command="pwd")
 
-    assert "No Local process sandbox backend" in result
+    assert "Local isolation unavailable" in result
+    assert "not supported on this platform" in result
+    assert "Shell execution was blocked" in result
+    assert "1. Keep the configured restrictions:" in result
+    assert "2. Allow execution without Local isolation:" in result
+    assert "Local Permission Policies" in result
+    assert "Do not bypass" not in result
 
 
 @pytest.mark.asyncio

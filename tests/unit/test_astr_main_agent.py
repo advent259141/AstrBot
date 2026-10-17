@@ -1562,19 +1562,26 @@ class TestEnsurePersonaAndSkills:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("role", ["admin", "member"])
+    @pytest.mark.parametrize("isolation_status", ["detected", "missing", "unavailable", "unsupported"])
     @pytest.mark.parametrize(
         ("allow_execution", "allow_network"),
         [(True, False), (True, True), (False, False)],
     )
     async def test_persona_empty_tools_keeps_local_runtime_builtin_tools(
         self,
+        monkeypatch,
         mock_event,
         mock_context,
         mock_provider,
         role,
         allow_execution,
         allow_network,
+        isolation_status,
     ):
+        monkeypatch.setattr(
+            "astrbot.core.tools.computer_tools.util.get_process_sandbox_status",
+            lambda: {"status": isolation_status},
+        )
         module = ama
         persona = {"name": "locked", "prompt": "No tools.", "tools": []}
         mock_context.persona_manager.resolve_selected_persona = AsyncMock(
@@ -1636,7 +1643,9 @@ class TestEnsurePersonaAndSkills:
             assert "yield_time_ms" in shell_tool.parameters["properties"]
             assert result.provider_request.system_prompt.count(
                 module.LOCAL_NETWORK_POLICY_NOTICE
-            ) == int(allow_execution and not allow_network)
+            ) == int(allow_execution and not allow_network and isolation_status == "detected")
+            assert "The Agent Computer Use runtime is the local environment" not in result.provider_request.system_prompt
+            assert "These restrictions require Local process isolation" not in result.provider_request.system_prompt
         finally:
             if result.reset_coro:
                 result.reset_coro.close()

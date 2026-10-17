@@ -329,6 +329,9 @@
         },
         "runtimeUnknown": "Runtime information is unavailable.",
         "memberWarning": "Members have network access or file access across the entire environment.",
+        "executionInactive": "Inactive",
+        "executionInactiveHelp": "Why execution is inactive",
+        "executionBlocked": "Code execution is enabled for {role}, but the configured isolation requirements cannot currently be met. {reason}",
         "runtime": {
           "os": "OS",
           "arch": "Architecture",
@@ -344,6 +347,11 @@
             "missing": "Install {dependency} to enable all local isolation features.",
             "unavailable": "Configure {backend} to enable all local isolation features.",
             "unsupported": "Learn about local isolation support."
+          },
+          "isolationFailure": {
+            "missing": "Missing {dependency}.",
+            "unavailable": "{backend} failed its startup probe.",
+            "unsupported": "Local process isolation is not supported on this platform."
           },
           "executionUnavailable": {
             "missing": "Missing {dependency}; code execution cannot be enabled when File access scope is set to Workspace.",
