@@ -148,6 +148,7 @@ DEFAULT_CONFIG = {
         "websearch_firecrawl_key": [],
         "websearch_exa_key": [],
         "websearch_anysearch_key": [],
+        "websearch_deepseek_key": [],
         "web_search_link": False,
         "display_reasoning_text": False,
         "identifier": False,
@@ -3678,6 +3679,7 @@ CONFIG_METADATA_3 = {
                             "firecrawl",
                             "exa",
                             "anysearch",
+                            "deepseek",
                         ],
                         "condition": {
                             "provider_settings.web_search": True,
@@ -3755,6 +3757,17 @@ CONFIG_METADATA_3 = {
                         "hint": "可添加多个 Key 进行轮询。留空则使用匿名模式（每日免费额度）。申请地址：https://anysearch.com/console/api-keys",
                         "condition": {
                             "provider_settings.websearch_provider": "anysearch",
+                            "provider_settings.web_search": True,
+                        },
+                    },
+                    "provider_settings.websearch_deepseek_key": {
+                        "description": "DeepSeek API Key",
+                        "type": "list",
+                        "items": {"type": "string"},
+                        "hint": "Configure a DeepSeek API key for search and page extraction. Multiple keys rotate; keys from the same account share rate limits.",
+                        "secret": True,
+                        "condition": {
+                            "provider_settings.websearch_provider": "deepseek",
                             "provider_settings.web_search": True,
                         },
                     },
