@@ -238,6 +238,7 @@ class MainAgentBuildConfig:
     provider_settings: dict = field(default_factory=dict)
     fallback_provider_ids: list[str] = field(default_factory=list)
     request_max_retries: int = 5
+    subagent_orchestrator: dict = field(default_factory=dict)
     timezone: str | None = None
     max_quoted_fallback_images: int = 20
     """Maximum number of images injected from quoted-message fallback extraction."""
@@ -667,6 +668,18 @@ async def _ensure_persona_and_skills(
     else:
         req.func_tool.merge(persona_toolset)
 
+    # Retain configuration-driven experts for plugins using the legacy SDK.
+    orch_cfg = plugin_context.get_config().get("subagent_orchestrator", {})
+    orchestrator = plugin_context.subagent_orchestrator
+    if orch_cfg.get("main_enable", False) and orchestrator:
+        if req.func_tool is None:
+            req.func_tool = ToolSet()
+        for tool in orchestrator.handoffs:
+            req.func_tool.add_tool(tool)
+        router_prompt = str(orch_cfg.get("router_system_prompt", "")).strip()
+        if router_prompt:
+            req.system_prompt += f"\n{router_prompt}\n"
+
 
 async def _request_img_caption(
     provider_id: str,
@@ -1035,7 +1048,8 @@ def _plugin_tool_fix(event: AstrMessageEvent, req: ProviderRequest) -> None:
                 continue
             mp = tool.handler_module_path
             if not mp:
-                # Tools without plugin ownership are not subject to plugin filtering.
+                # 没有 plugin 归属信息的工具（如 subagent transfer_to_*）
+                # 不应受到会话插件过滤影响。
                 new_tool_set.add_tool(tool)
                 continue
             plugin = star_map.get(mp)

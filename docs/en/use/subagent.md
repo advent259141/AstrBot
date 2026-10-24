@@ -1,6 +1,6 @@
 # Subagent Plugin {#agent-handoff-and-subagent}
 
-Delegation is now provided by the independent `astrbot_plugin_subagent` plugin for AstrBot's built-in Agent. It requires the core Agent lifecycle SDK update. Subagents provided by external Agent services remain configured in those services.
+Asynchronous delegation is provided by the independent `astrbot_plugin_subagent` plugin for AstrBot's built-in Agent. It requires the core Agent lifecycle SDK update. Subagents provided by external Agent services remain configured in those services. Configuration-driven legacy experts and their orchestrator remain available for existing plugins.
 
 ## Install and configure {#configuration}
 
@@ -47,9 +47,9 @@ Delivery is at least once: abnormal exits can cause duplicates. Stopping a sessi
 | --- | --- |
 | Extensions → SubAgents | Extensions → Plugins → Subagent → Settings |
 | Built-in SubAgent page | Plugin detail → runtime |
-| Built-in `transfer_to_*` experts | `spawn_agent`; plugin-registered SDK handoffs remain supported |
-| Core `subagent_orchestrator` configuration | Plugin settings; copy expert definitions into `agents`, and use `enabled` |
+| Legacy `transfer_to_*` experts | Retained; use `spawn_agent` for new asynchronous workers |
+| Core `subagent_orchestrator` configuration | Retained; optionally copy expert definitions into the plugin's `agents`, and use `enabled` |
 
-The tool deduplication switch and old router prompt are no longer used.
+The tool deduplication switch no longer removes main's tools. The legacy `main_enable` switch and router prompt still apply to legacy experts. The old `/api/v1/subagents/*` and `/api/subagent/*` routes are removed; the new plugin uses standard plugin APIs.
 
-The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain supported for existing plugins, including nested tools and foreground/background execution. They are deprecated in favor of the plugin's worker tools. Plugins accessing the removed `context.subagent_orchestrator` service still require migration.
+The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain supported for existing plugins, including nested tools and foreground/background execution. `Context.subagent_orchestrator`, its constructor argument, configuration loading, and `reload_from_config()` are also retained so existing plugins can discover and invoke legacy experts. These interfaces are deprecated in favor of the plugin's worker tools.
