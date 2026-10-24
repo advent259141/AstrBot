@@ -456,7 +456,7 @@ async def after_step(self, event: AstrMessageEvent, run_context: ContextWrapper[
 
 内置工具循环在本轮执行退出时触发一次 `on_agent_done`，覆盖正常完成、模型错误、未处理异常、取消和步数耗尽。它在最后一个完整 step 的结束钩子之后触发，不代表会话历史已经保存。可以读取 `run_context.run_end_reason`（`completed`、`error`、`cancelled` 或 `max_steps`）及 `run_context.run_error`（错误说明或 `None`）。进程被强制终止时无法执行清理钩子。
 
-处理函数的参数数量不变，但没有最终响应时 `resp` 可以是 `None`，使用前需要判断。用户停止执行时仍可能携带原有的中断提示响应。没有模型回复的收尾及合成的中断提示不会触发 `on_llm_response`；正常回复处理仍早于 `on_agent_done`。需要在发送前修改回复，请使用 `on_llm_response`。
+没有最终响应时，`resp` 可以是 `None`，使用前需要判断。用户停止执行时可能携带合成的中断提示响应。没有模型回复的收尾及合成的中断提示不会触发 `on_llm_response`；正常回复处理早于 `on_agent_done`。需要在发送前修改回复，请使用 `on_llm_response`。
 
 ```python
 from astrbot.api.event import filter, AstrMessageEvent

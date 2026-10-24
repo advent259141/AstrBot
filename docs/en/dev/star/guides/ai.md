@@ -307,11 +307,11 @@ async def test(self, event: AstrMessageEvent):
 
 ## Retain an SDK execution context
 
-Pass `run_context=wrapper` to `tool_loop_agent` to reuse a caller-owned `ContextWrapper`, including its messages and execution state. The wrapper must belong to the same Context and event; mismatches raise `ValueError`. Existing `agent_context` callers continue to work.
+Pass `run_context=wrapper` to `tool_loop_agent` to reuse a caller-owned `ContextWrapper`, including its messages and execution state. The wrapper must belong to the same Context and event; mismatches raise `ValueError`. Use `agent_context` to supply an Agent context without a caller-owned wrapper.
 
 `run_context.runner` points to the active runner. `run_end_reason` and `run_error` are populated before `on_agent_done`. The built-in tool loop reports completion, errors, cancellation, and step-budget exhaustion; external Agent runners retain their own lifecycle behavior.
 
-Plugins can retain an already scheduled asyncio Task with `context.register_background_task(event, task)`; stopping its session cancels the task. Submit synthetic events through the existing event queue. Events use the session's current conversation. Plugins that require a particular conversation should validate the current CID before enqueueing and when handling the event, and avoid automatically waking old tasks after a stop or conversation switch.
+Plugins can retain an already scheduled asyncio Task with `context.register_background_task(event, task)`; stopping its session cancels the task. Submit synthetic events through the event queue. Events use the session's current conversation. Plugins that require a particular conversation should validate the current CID before enqueueing and when handling the event, and avoid automatically resuming tasks belonging to a stopped session or a different conversation.
 
 `FunctionTool.execution_timeout` optionally gives waiting tools an independent timeout in seconds. Otherwise the runner default applies. Permission wrappers preserve this setting.
 

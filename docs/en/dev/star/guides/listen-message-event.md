@@ -455,7 +455,7 @@ These hooks use the same event/context imports shown below. `on_llm_request` and
 
 The built-in tool-loop runner triggers `on_agent_done` once when a run exits, including normal completion, provider errors, unexpected exceptions, cancellation and step-budget exhaustion. It runs after the final completed step's end hook; it does not confirm that conversation history has been saved. Check `run_context.run_end_reason` (`completed`, `error`, `cancelled`, or `max_steps`) and `run_context.run_error` (an error description or `None`). Forced termination of the process cannot run cleanup hooks.
 
-The existing handler arguments are unchanged, but `resp` can now be `None` if execution exits without a final response. Guard access to it. A user stop may still supply the existing synthetic interruption response. `on_llm_response` is not dispatched for cleanup without a model reply or for a synthetic interruption; normal response handling still precedes `on_agent_done`. To modify a reply before delivery, use `on_llm_response`.
+`resp` can be `None` if execution exits without a final response. Guard access to it. A user stop may supply a synthetic interruption response. `on_llm_response` is not dispatched for cleanup without a model reply or for a synthetic interruption; normal response handling precedes `on_agent_done`. To modify a reply before delivery, use `on_llm_response`.
 
 ```python
 from astrbot.api.event import filter, AstrMessageEvent
