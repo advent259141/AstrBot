@@ -16,7 +16,7 @@ Results return at complete step boundaries or wake idle main through the existin
 | Core `subagent_orchestrator` settings | Retained for legacy experts; asynchronous workers use plugin settings |
 | `/api/v1/subagents/*` and `/api/subagent/*` | Removed; new runtime views use authenticated plugin APIs |
 
-The old tool-deduplication switch no longer removes tools from main. The legacy `main_enable` switch and router prompt still apply to legacy experts. Existing definitions can optionally be copied into the plugin's `agents` list; use `enabled` for plugin activation. The plugin requires this core SDK update and is distributed separately.
+The old tool-deduplication switch no longer removes tools from main. The legacy `main_enable` switch still mounts legacy experts, but the old `router_system_prompt` default and injection are removed; persisted values are ignored. Existing definitions can optionally be copied into the plugin's `agents` list; use `enabled` for plugin activation. The plugin requires this core SDK update and is distributed separately.
 
 The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain available for existing plugins, including nested tool binding and foreground/background handoff execution. `Context.subagent_orchestrator`, its constructor argument, configuration loading, and `reload_from_config()` are also retained. These legacy interfaces are deprecated in favor of the plugin's worker tools; retaining them keeps existing expert discovery and delegation working while plugins migrate.
 

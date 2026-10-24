@@ -50,6 +50,6 @@
 | 旧专家生成的 `transfer_to_*` | 保留兼容；新的异步 worker 使用 `spawn_agent` |
 | `subagent_orchestrator` 核心配置 | 保留兼容；也可将专家定义复制到插件的 `agents`，启用项使用 `enabled` |
 
-工具去重开关不再移除主 Agent 的工具。旧的 `main_enable` 开关和编排路由提示词仍用于旧专家挂载。旧的 `/api/v1/subagents/*`、`/api/subagent/*` 接口已移除，新插件使用标准插件接口。
+工具去重开关不再移除主 Agent 的工具。旧的 `main_enable` 开关仍可挂载旧专家，但不再追加旧的编排路由提示词；已保存的 `router_system_prompt` 值会被忽略。旧的 `/api/v1/subagents/*`、`/api/subagent/*` 接口已移除，新插件使用标准插件接口。
 
 为兼容现有插件，保留旧 SDK 的 `@agent` / `register_agent`、`RegisteringAgent` 和 `HandoffTool`，以及嵌套工具绑定、前台和后台执行。同时保留 `Context.subagent_orchestrator` 属性、构造参数、旧配置加载和 `reload_from_config()`，已有插件仍可获取和调用旧专家。这些接口标记为弃用，新开发优先使用插件的 worker 工具。

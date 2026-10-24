@@ -212,11 +212,6 @@ DEFAULT_CONFIG = {
     #   tools (transfer_to_*). Main retains its own tools.
     "subagent_orchestrator": {
         "main_enable": False,
-        "router_system_prompt": (
-            "You are a task router. Your job is to chat naturally, recognize user intent, "
-            "and delegate work to the most suitable subagent using transfer_to_* tools. "
-            "Do not try to use domain tools yourself. If no subagent fits, respond directly."
-        ),
         "agents": [],
     },
     "provider_stt_settings": {

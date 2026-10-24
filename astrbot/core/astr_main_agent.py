@@ -676,9 +676,6 @@ async def _ensure_persona_and_skills(
             req.func_tool = ToolSet()
         for tool in orchestrator.handoffs:
             req.func_tool.add_tool(tool)
-        router_prompt = str(orch_cfg.get("router_system_prompt", "")).strip()
-        if router_prompt:
-            req.system_prompt += f"\n{router_prompt}\n"
 
 
 async def _request_img_caption(

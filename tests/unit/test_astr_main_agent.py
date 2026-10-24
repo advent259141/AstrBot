@@ -1745,7 +1745,7 @@ class TestEnsurePersonaAndSkills:
     async def test_legacy_subagents_mount_handoffs_without_removing_main_tools(
         self, mock_event, mock_context
     ):
-        """Legacy expert configuration keeps the main Agent's existing tools."""
+        """Legacy experts keep main's tools without injecting obsolete routing."""
         module = ama
         mock_context.persona_manager.resolve_selected_persona = AsyncMock(
             return_value=(None, None, None, False)
@@ -1799,7 +1799,7 @@ class TestEnsurePersonaAndSkills:
         assert "transfer_to_planner" in req.func_tool.names()
         assert "tool_a" in req.func_tool.names()
         assert "tool_b" in req.func_tool.names()
-        assert "Legacy expert routing." in req.system_prompt
+        assert "Legacy expert routing." not in req.system_prompt
 
 
 class TestDecorateLlmRequest:

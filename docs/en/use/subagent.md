@@ -50,6 +50,6 @@ Delivery is at least once: abnormal exits can cause duplicates. Stopping a sessi
 | Legacy `transfer_to_*` experts | Retained; use `spawn_agent` for new asynchronous workers |
 | Core `subagent_orchestrator` configuration | Retained; optionally copy expert definitions into the plugin's `agents`, and use `enabled` |
 
-The tool deduplication switch no longer removes main's tools. The legacy `main_enable` switch and router prompt still apply to legacy experts. The old `/api/v1/subagents/*` and `/api/subagent/*` routes are removed; the new plugin uses standard plugin APIs.
+The tool deduplication switch no longer removes main's tools. The legacy `main_enable` switch still mounts legacy experts, but no longer injects the old router prompt; persisted `router_system_prompt` values are ignored. The old `/api/v1/subagents/*` and `/api/subagent/*` routes are removed; the new plugin uses standard plugin APIs.
 
 The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain supported for existing plugins, including nested tools and foreground/background execution. `Context.subagent_orchestrator`, its constructor argument, configuration loading, and `reload_from_config()` are also retained so existing plugins can discover and invoke legacy experts. These interfaces are deprecated in favor of the plugin's worker tools.
