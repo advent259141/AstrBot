@@ -238,7 +238,6 @@ class MainAgentBuildConfig:
     provider_settings: dict = field(default_factory=dict)
     fallback_provider_ids: list[str] = field(default_factory=list)
     request_max_retries: int = 5
-    subagent_orchestrator: dict = field(default_factory=dict)
     timezone: str | None = None
     max_quoted_fallback_images: int = 20
     """Maximum number of images injected from quoted-message fallback extraction."""
@@ -667,15 +666,6 @@ async def _ensure_persona_and_skills(
         req.func_tool = persona_toolset
     else:
         req.func_tool.merge(persona_toolset)
-
-    # Retain configuration-driven experts for plugins using the legacy SDK.
-    orch_cfg = plugin_context.get_config().get("subagent_orchestrator", {})
-    orchestrator = plugin_context.subagent_orchestrator
-    if orch_cfg.get("main_enable", False) and orchestrator:
-        if req.func_tool is None:
-            req.func_tool = ToolSet()
-        for tool in orchestrator.handoffs:
-            req.func_tool.add_tool(tool)
 
 
 async def _request_img_caption(

@@ -1742,10 +1742,10 @@ class TestEnsurePersonaAndSkills:
                 result.reset_coro.close()
 
     @pytest.mark.asyncio
-    async def test_legacy_subagents_mount_handoffs_without_removing_main_tools(
+    async def test_legacy_plugin_experts_are_not_mounted_by_main(
         self, mock_event, mock_context
     ):
-        """Legacy experts keep main's tools without injecting obsolete routing."""
+        """The plugin compatibility entry does not activate native main routing."""
         module = ama
         mock_context.persona_manager.resolve_selected_persona = AsyncMock(
             return_value=(None, None, None, False)
@@ -1796,7 +1796,8 @@ class TestEnsurePersonaAndSkills:
         await module._ensure_persona_and_skills(req, {}, mock_context, mock_event)
 
         assert req.func_tool is not None
-        assert "transfer_to_planner" in req.func_tool.names()
+        assert "transfer_to_planner" not in req.func_tool.names()
+        assert mock_context.subagent_orchestrator.handoffs == [handoff]
         assert "tool_a" in req.func_tool.names()
         assert "tool_b" in req.func_tool.names()
         assert "Legacy expert routing." not in req.system_prompt

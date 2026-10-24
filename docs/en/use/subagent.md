@@ -1,6 +1,6 @@
 # Subagent Plugin {#agent-handoff-and-subagent}
 
-Asynchronous delegation is provided by the independent `astrbot_plugin_subagent` plugin for AstrBot's built-in Agent. It requires the core Agent lifecycle SDK update. Subagents provided by external Agent services remain configured in those services. Configuration-driven legacy experts and their orchestrator remain available for existing plugins.
+Asynchronous delegation is provided by the independent `astrbot_plugin_subagent` plugin for AstrBot's built-in Agent. It requires the core Agent lifecycle SDK update. Subagents provided by external Agent services remain configured in those services. Legacy expert discovery and reload remain available only for plugin SDK compatibility; core main no longer mounts legacy experts automatically.
 
 ## Install and configure {#configuration}
 
@@ -47,9 +47,9 @@ Delivery is at least once: abnormal exits can cause duplicates. Stopping a sessi
 | --- | --- |
 | Extensions → SubAgents | Extensions → Plugins → Subagent → Settings |
 | Built-in SubAgent page | Plugin detail → runtime |
-| Legacy `transfer_to_*` experts | Retained; use `spawn_agent` for new asynchronous workers |
-| Core `subagent_orchestrator` configuration | Retained; optionally copy expert definitions into the plugin's `agents`, and use `enabled` |
+| Legacy `transfer_to_*` experts | Available through the plugin compatibility SDK; core main no longer mounts them |
+| Core `subagent_orchestrator` configuration | Only `agents` data is retained for legacy plugins; optionally copy definitions into the new plugin's `agents`, and use `enabled` |
 
-The tool deduplication switch no longer removes main's tools. The legacy `main_enable` switch still mounts legacy experts, but no longer injects the old router prompt; persisted `router_system_prompt` values are ignored. The old `/api/v1/subagents/*` and `/api/subagent/*` routes are removed; the new plugin uses standard plugin APIs.
+Native expert mounting, `main_enable`, tool deduplication, and the router prompt are removed. The legacy `agents` data slot remains so configuration cleanup does not discard definitions needed by existing plugins. The old `/api/v1/subagents/*` and `/api/subagent/*` routes are removed; the new plugin uses standard plugin APIs.
 
 The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain supported for existing plugins, including nested tools and foreground/background execution. `Context.subagent_orchestrator`, its constructor argument, configuration loading, and `reload_from_config()` are also retained so existing plugins can discover and invoke legacy experts. These interfaces are deprecated in favor of the plugin's worker tools.

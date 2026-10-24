@@ -1,6 +1,6 @@
 # Subagent 插件 {#agent-handsoff-与-subagent}
 
-异步子代理能力由独立的 `astrbot_plugin_subagent` 插件提供，适用于 AstrBot 内置 Agent。需要包含 Agent 生命周期 SDK 更新的核心版本；外部 Agent 服务的子代理仍在对应服务中配置。旧的配置驱动专家和编排器继续保留，以兼容现有插件。
+异步子代理能力由独立的 `astrbot_plugin_subagent` 插件提供，适用于 AstrBot 内置 Agent。需要包含 Agent 生命周期 SDK 更新的核心版本；外部 Agent 服务的子代理仍在对应服务中配置。旧专家的发现和重载入口仅为兼容现有插件保留，本体不再自动挂载旧专家。
 
 ## 安装与配置 {#configuration}
 
@@ -47,9 +47,9 @@
 | --- | --- |
 | 扩展 → 子代理 | 扩展 → 插件 → Subagent → 设置 |
 | 核心子代理页面 | 插件详情 → runtime |
-| 旧专家生成的 `transfer_to_*` | 保留兼容；新的异步 worker 使用 `spawn_agent` |
-| `subagent_orchestrator` 核心配置 | 保留兼容；也可将专家定义复制到插件的 `agents`，启用项使用 `enabled` |
+| 旧专家生成的 `transfer_to_*` | 插件兼容 SDK 仍可使用，本体不再自动挂载；新 worker 使用 `spawn_agent` |
+| `subagent_orchestrator` 核心配置 | 仅保留供旧插件读取的 `agents` 数据；可复制到新插件的 `agents`，启用项使用 `enabled` |
 
-工具去重开关不再移除主 Agent 的工具。旧的 `main_enable` 开关仍可挂载旧专家，但不再追加旧的编排路由提示词；已保存的 `router_system_prompt` 值会被忽略。旧的 `/api/v1/subagents/*`、`/api/subagent/*` 接口已移除，新插件使用标准插件接口。
+本体的旧专家自动挂载、`main_enable` 开关、工具去重和编排路由提示词均已移除。保留旧 `agents` 数据项，避免配置清理时丢失旧插件依赖的专家定义。旧的 `/api/v1/subagents/*`、`/api/subagent/*` 接口已移除，新插件使用标准插件接口。
 
 为兼容现有插件，保留旧 SDK 的 `@agent` / `register_agent`、`RegisteringAgent` 和 `HandoffTool`，以及嵌套工具绑定、前台和后台执行。同时保留 `Context.subagent_orchestrator` 属性、构造参数、旧配置加载和 `reload_from_config()`，已有插件仍可获取和调用旧专家。这些接口标记为弃用，新开发优先使用插件的 worker 工具。

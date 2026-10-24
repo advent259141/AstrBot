@@ -206,12 +206,8 @@ DEFAULT_CONFIG = {
         "runner_type": "local",
         "config": get_agent_runner_config_default("local"),
     },
-    # SubAgent orchestrator mode:
-    # - main_enable = False: disabled; main LLM mounts tools normally (persona selection).
-    # - main_enable = True: enabled; main LLM keeps its own tools and includes handoff
-    #   tools (transfer_to_*). Main retains its own tools.
+    # Preserve legacy expert definitions for plugins using the compatibility SDK.
     "subagent_orchestrator": {
-        "main_enable": False,
         "agents": [],
     },
     "provider_stt_settings": {
