@@ -47,7 +47,9 @@ Delivery is at least once: abnormal exits can cause duplicates. Stopping a sessi
 | --- | --- |
 | Extensions → SubAgents | Extensions → Plugins → Subagent → Settings |
 | Built-in SubAgent page | Plugin detail → runtime |
-| `transfer_to_*`, `@agent` | `spawn_agent`; old entry points are removed |
+| Built-in `transfer_to_*` experts | `spawn_agent`; plugin-registered SDK handoffs remain supported |
 | Core `subagent_orchestrator` configuration | Plugin settings; copy expert definitions into `agents`, and use `enabled` |
 
 The tool deduplication switch and old router prompt are no longer used.
+
+The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain supported for existing plugins, including nested tools and foreground/background execution. They are deprecated in favor of the plugin's worker tools. Plugins accessing the removed `context.subagent_orchestrator` service still require migration.

@@ -47,7 +47,9 @@
 | --- | --- |
 | 扩展 → 子代理 | 扩展 → 插件 → Subagent → 设置 |
 | 核心子代理页面 | 插件详情 → runtime |
-| `transfer_to_*`、`@agent` | `spawn_agent`，旧入口已移除 |
+| 内置专家生成的 `transfer_to_*` | `spawn_agent`；插件自行注册的 SDK handoff 仍受支持 |
 | `subagent_orchestrator` 核心配置 | 插件设置；可将专家定义复制到 `agents`，启用项使用 `enabled` |
 
 工具去重开关和旧的编排路由提示词不再使用。
+
+为兼容现有插件，保留旧 SDK 的 `@agent` / `register_agent`、`RegisteringAgent` 和 `HandoffTool`，以及嵌套工具绑定、前台和后台执行。这些接口标记为弃用，新开发优先使用插件的 worker 工具。直接访问已移除的 `context.subagent_orchestrator` 服务的插件仍需迁移。

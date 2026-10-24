@@ -28,7 +28,7 @@ from astrbot.core import (
     pip_installer,
     sp,
 )
-from astrbot.core.agent.tool import FunctionTool
+from astrbot.core.agent.handoff import FunctionTool, HandoffTool
 from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.config.default import VERSION
 from astrbot.core.platform.register import unregister_platform_adapters_by_module
@@ -888,11 +888,18 @@ class PluginManager:
         """Return concrete function tools that may belong to a plugin.
 
         Args:
-            func_tool: A registered function tool.
+            func_tool: A registered function tool, possibly a handoff tool.
 
         Returns:
             The concrete function tools to inspect for plugin ownership.
         """
+        if isinstance(func_tool, HandoffTool):
+            agent = getattr(func_tool, "agent", None)
+            tools = getattr(agent, "tools", None) if agent else None
+            for tool in tools or []:
+                if isinstance(tool, FunctionTool):
+                    yield tool
+            return
         yield func_tool
 
     @staticmethod
@@ -931,7 +938,7 @@ class PluginManager:
             plugin_module_path: Plugin module path.
 
         Returns:
-            Matching function tools.
+            Matching function tools, including sub-tools inside handoff tools.
         """
         if not plugin_module_path:
             return

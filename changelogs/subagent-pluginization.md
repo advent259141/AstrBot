@@ -12,9 +12,11 @@ Results return at complete step boundaries or wake idle main through the existin
 | --- | --- |
 | Extensions → SubAgents | Extensions → Plugins → Subagent → Settings |
 | Built-in SubAgent page | Plugin detail → runtime |
-| `transfer_to_*`, `@agent` | `spawn_agent`; legacy tools and decorator are removed |
+| Built-in `transfer_to_*` experts | `spawn_agent`; plugin-registered SDK handoffs remain supported |
 | Core `subagent_orchestrator` settings and `/api/v1/subagents/*` | Plugin settings and authenticated plugin view APIs |
 
 The old tool-deduplication switch and router prompt are removed. Existing expert definitions can be copied into the plugin's `agents` list; use `enabled` for plugin activation. The plugin requires this core SDK update and is distributed separately.
+
+The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain available for existing plugins, including nested tool binding and foreground/background handoff execution. These interfaces are deprecated in favor of the plugin's worker tools. Removing the built-in orchestrator still requires plugins that access `context.subagent_orchestrator` to migrate; retaining the SDK does not restore that configuration-driven service.
 
 The runtime view remains read-only and uses AstrBot's standard plugin API authentication and permissions. Users communicate with workers through main. Chinese and English usage guides include the updated entry mapping and screenshots using sample records.

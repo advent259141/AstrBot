@@ -11,6 +11,8 @@ import pytest
 # 将项目根目录添加到 sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from astrbot.core.agent.agent import Agent
+from astrbot.core.agent.handoff import HandoffTool
 from astrbot.core.agent.hooks import BaseAgentRunHooks
 from astrbot.core.agent.message import ImageURLPart, Message, TextPart
 from astrbot.core.agent.run_context import ContextWrapper
@@ -1471,12 +1473,13 @@ async def test_stop_cancels_provider_before_first_response(
 
 
 @pytest.mark.asyncio
-async def test_stop_interrupts_pending_local_tool(mock_hooks):
+async def test_stop_interrupts_pending_subagent_handoff(mock_hooks):
     subagent_context = BlockingSubagentContext()
     event = MockEvent("webchat:FriendMessage:webchat!user!session", "user")
-    async def blocked(context, **kwargs):
-        return await subagent_context.tool_loop_agent(**kwargs)
-    handoff_tool = FunctionTool(name="blocking_tool", description="Blocking test tool", parameters={"type": "object", "properties": {}}, handler=blocked)
+    handoff_tool = HandoffTool(
+        Agent(name="subagent", instructions="subagent-instructions", tools=[]),
+        tool_description="Delegate tasks to the subagent.",
+    )
     provider = MockHandoffProvider(handoff_tool.name)
     request = ProviderRequest(
         prompt="delegate",
