@@ -2,7 +2,7 @@
 
 子代理让主 Agent 自主委派任务，多个子代理在后台并行执行，并将结果交回主 Agent。每个子代理拥有独立历史，可以使用不同的模型、人格和工具。
 
-该能力适用于 AstrBot 内置 Agent，通过 Subagent 扩展提供。外部 Agent 服务的子代理在对应服务中配置。
+该能力适用于 AstrBot 内置 Agent，由随 AstrBot 提供的 Subagent 内置扩展实现。外部 Agent 服务的子代理在对应服务中配置。
 
 ## 开始使用 {#configuration}
 

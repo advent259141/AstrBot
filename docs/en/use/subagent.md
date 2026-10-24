@@ -2,7 +2,7 @@
 
 Main can delegate tasks to subagents that run concurrently in the background and return their results. Each subagent has a private history and can use its own model, persona, and tools.
 
-The Subagent extension provides this capability for AstrBot's built-in Agent. Configure subagents for external Agent services in those services.
+The Subagent extension ships with AstrBot and provides this capability for its built-in Agent. Configure subagents for external Agent services in those services.
 
 ## Get started {#configuration}
 

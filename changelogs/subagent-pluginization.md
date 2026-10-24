@@ -1,5 +1,6 @@
 # Asynchronous subagents
 
+- The Subagent extension is bundled under `astrbot/builtin_stars/astrbot_plugin_subagent` and uses the standard built-in plugin loading, configuration, and view mechanisms.
 - Main delegates tasks through the Subagent extension while workers run concurrently with private histories and configurable providers, personas, prompts, and tools.
 - `spawn_agent` accepts an initial task, expert template, display name, and provider override. Its parameters list available chat providers; its result includes the actual name and resolved provider ID.
 - Main can list workers, wait for results, read results repeatedly, send follow-up instructions, and cancel individual workers. Follow-ups steer an active turn or start the next turn with the same identity and history.
