@@ -159,6 +159,8 @@ Windows supports workspace-scoped file reading, writing, and editing through nat
 
 Local process isolation is currently unsupported on native Windows. Administrators can execute code with entire-environment access and networking enabled. For isolated code execution, use a [third-party sandbox environment](#third-party-sandbox-environment).
 
+Native Windows managed Shell sessions track the Shell and its descendants together. Terminating a session, reaching a configured command timeout, or revoking its execution permissions also stops child processes, including children whose original Shell has already exited. This process-lifetime tracking does not provide filesystem or network isolation.
+
 ## Third-party sandbox environment {#third-party-sandbox-environment}
 
 Third-party sandboxes are an optional AstrBot capability. They let the Agent execute code and file operations in a **separate environment**, avoiding direct access to files and commands on the host or inside the AstrBot container. Supported sandbox drivers include:

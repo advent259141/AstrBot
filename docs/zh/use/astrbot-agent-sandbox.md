@@ -149,6 +149,8 @@ Docker 已提供容器级的隔离。在容器内，AstrBot 默认只能访问�
 
 目前 Windows 系统暂不支持本机隔离能力。您可以选择使用 [第三方沙箱环境](#third-party-sandbox-environment)。
 
+Windows 本地 Shell 会话会统一管理 Shell 及其派生的子进程。终止会话、达到配置的命令超时或撤销执行权限时，会一并停止子进程，包括原 Shell 已经退出后仍存活的子进程。此处的进程生命周期管理不提供文件系统或网络隔离。
+
 ## 第三方沙箱环境 {#third-party-sandbox-environment}
 
 第三方沙箱环境是 AstrBot 提供的一种可选能力。它可以让 Agent 在**独立的环境**中执行代码和文件操作，避免直接访问宿主机或 AstrBot 容器内的文件和命令。目前支持的第三方沙箱环境驱动器包括：
