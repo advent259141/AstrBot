@@ -1,7 +1,6 @@
 from .star import register_star
 from .star_handler import (
     register_after_message_sent,
-    register_agent,
     register_command,
     register_command_group,
     register_custom_filter,
@@ -9,6 +8,8 @@ from .star_handler import (
     register_llm_tool,
     register_on_agent_begin,
     register_on_agent_done,
+    register_on_agent_step_end,
+    register_on_agent_step_start,
     register_on_astrbot_loaded,
     register_on_decorating_result,
     register_on_llm_request,
@@ -27,7 +28,6 @@ from .star_handler import (
 
 __all__ = [
     "register_after_message_sent",
-    "register_agent",
     "register_command",
     "register_command_group",
     "register_custom_filter",
@@ -35,6 +35,8 @@ __all__ = [
     "register_llm_tool",
     "register_on_agent_begin",
     "register_on_agent_done",
+    "register_on_agent_step_end",
+    "register_on_agent_step_start",
     "register_on_astrbot_loaded",
     "register_on_decorating_result",
     "register_on_llm_request",

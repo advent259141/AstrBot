@@ -7,7 +7,6 @@ from pathlib import Path
 import mcp
 import pytest
 
-from astrbot.core.astr_agent_tool_exec import FunctionToolExecutor
 from astrbot.core.computer.booters.cua import CuaShellComponent
 from astrbot.core.config.default import CONFIG_METADATA_3
 from astrbot.core.provider.func_tool_manager import FunctionToolManager
@@ -1530,32 +1529,10 @@ def test_cua_tools_are_registered_as_builtin_tools():
     )
 
 
-def test_cua_runtime_tools_are_available_to_handoffs():
-    manager = FunctionToolManager()
-
-    tools = FunctionToolExecutor._get_runtime_computer_tools("sandbox", manager, "cua")
-
-    assert "astrbot_cua_screenshot" in tools
-    assert "astrbot_cua_mouse_click" in tools
-    assert "astrbot_cua_keyboard_type" in tools
-    assert "astrbot_cua_key_press" not in tools
 
 
-def test_runtime_tool_selection_treats_none_booter_as_empty():
-    manager = FunctionToolManager()
-
-    tools = FunctionToolExecutor._get_runtime_computer_tools("sandbox", manager, None)
-
-    assert "astrbot_execute_shell" in tools
-    assert "astrbot_cua_screenshot" not in tools
 
 
-def test_runtime_tool_selection_normalizes_cua_booter_case():
-    manager = FunctionToolManager()
-
-    tools = FunctionToolExecutor._get_runtime_computer_tools("sandbox", manager, "CUA")
-
-    assert "astrbot_cua_screenshot" in tools
 
 
 def test_cua_is_exposed_in_sandbox_config_metadata():

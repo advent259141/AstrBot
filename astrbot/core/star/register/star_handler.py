@@ -7,10 +7,6 @@ from typing import Any
 import docstring_parser
 
 from astrbot.core import logger
-from astrbot.core.agent.agent import Agent
-from astrbot.core.agent.handoff import HandoffTool
-from astrbot.core.agent.hooks import BaseAgentRunHooks
-from astrbot.core.agent.tool import FunctionTool
 from astrbot.core.message.message_event_result import MessageEventResult
 from astrbot.core.provider.func_tool_manager import PY_TO_JSON_TYPE, SUPPORTED_TYPES
 from astrbot.core.provider.register import llm_tools
@@ -505,7 +501,10 @@ def register_on_agent_begin(**kwargs):
 
 
 def register_on_agent_done(**kwargs):
-    """当 Agent 运行完成后的事件
+    """Register an Agent exit handler, including errors and cancellation.
+
+    The response can be None when execution exits without a final response.
+    Inspect run_context.run_end_reason and run_context.run_error for details.
 
     Examples:
     ```py
@@ -518,7 +517,7 @@ def register_on_agent_done(**kwargs):
         self,
         event: AstrMessageEvent,
         run_context: ContextWrapper[AstrAgentContext],
-        response: LLMResponse,
+        response: LLMResponse | None,
     ) -> None:
         ...
     ```
@@ -529,6 +528,42 @@ def register_on_agent_done(**kwargs):
 
     def decorator(awaitable):
         _ = get_handler_or_create(awaitable, EventType.OnAgentDoneEvent, **kwargs)
+        return awaitable
+
+    return decorator
+
+
+def register_on_agent_step_start(**kwargs):
+    """Register a handler before each complete Agent step.
+
+    Args:
+        **kwargs: Handler registration options, including priority.
+
+    Returns:
+        A decorator for async handlers accepting event and run_context.
+    """
+
+    def decorator(awaitable):
+        _ = get_handler_or_create(awaitable, EventType.OnAgentStepStartEvent, **kwargs)
+        return awaitable
+
+    return decorator
+
+
+def register_on_agent_step_end(**kwargs):
+    """Register a handler after a step's tool results and images are assembled.
+
+    Interrupted steps do not trigger this event; on_agent_done handles their exit.
+
+    Args:
+        **kwargs: Handler registration options, including priority.
+
+    Returns:
+        A decorator for async handlers accepting event and run_context.
+    """
+
+    def decorator(awaitable):
+        _ = get_handler_or_create(awaitable, EventType.OnAgentStepEndEvent, **kwargs)
         return awaitable
 
     return decorator
@@ -617,9 +652,6 @@ def register_llm_tool(name: str | None = None, **kwargs):
 
     """
     name_ = name
-    registering_agent = None
-    if kwargs.get("registering_agent"):
-        registering_agent = kwargs["registering_agent"]
 
     def decorator(
         awaitable: Callable[
@@ -664,65 +696,11 @@ def register_llm_tool(name: str | None = None, **kwargs):
                     arg_json_schema["items"] = {"type": sub_type_name}
             args.append(arg_json_schema)
 
-        if not registering_agent:
-            doc_desc = docstring.description.strip() if docstring.description else ""
-            md = get_handler_or_create(awaitable, EventType.OnCallingFuncToolEvent)
-            llm_tools.add_func(llm_tool_name, args, doc_desc, md.handler)
-        else:
-            assert isinstance(registering_agent, RegisteringAgent)
-            # print(f"Registering tool {llm_tool_name} for agent", registering_agent._agent.name)
-            if registering_agent._agent.tools is None:
-                registering_agent._agent.tools = []
-
-            desc = docstring.description.strip() if docstring.description else ""
-            tool = llm_tools.spec_to_func(llm_tool_name, args, desc, awaitable)
-            registering_agent._agent.tools.append(tool)
+        doc_desc = docstring.description.strip() if docstring.description else ""
+        md = get_handler_or_create(awaitable, EventType.OnCallingFuncToolEvent)
+        llm_tools.add_func(llm_tool_name, args, doc_desc, md.handler)
 
         return awaitable
-
-    return decorator
-
-
-class RegisteringAgent:
-    """用于 Agent 注册"""
-
-    def llm_tool(self, *args, **kwargs):
-        kwargs["registering_agent"] = self
-        return register_llm_tool(*args, **kwargs)
-
-    def __init__(self, agent: Agent[Any]) -> None:
-        self._agent = agent
-
-
-def register_agent(
-    name: str,
-    instruction: str,
-    tools: list[str | FunctionTool] | None = None,
-    run_hooks: BaseAgentRunHooks[Any] | None = None,
-):
-    """注册一个 Agent
-
-    Args:
-        name: Agent 的名称
-        instruction: Agent 的指令
-        tools: Agent 使用的工具列表
-        run_hooks: Agent 运行时的钩子函数
-
-    """
-    tools_ = tools or []
-
-    def decorator(awaitable: Callable[..., Awaitable[Any]]):
-        AstrAgent = Agent[Any]
-        agent = AstrAgent(
-            name=name,
-            instructions=instruction,
-            tools=tools_,
-            run_hooks=run_hooks or BaseAgentRunHooks[Any](),
-        )
-        handoff_tool = HandoffTool(agent=agent)
-        handoff_tool.handler = awaitable
-        llm_tools.func_list.append(handoff_tool)
-        return RegisteringAgent(agent)
 
     return decorator
 
