@@ -10,8 +10,8 @@ Results return at complete step boundaries or wake idle main through the existin
 
 | Previous entry | Replacement |
 | --- | --- |
-| Extensions → SubAgents | Extensions → Plugins → Subagent → Settings |
-| Built-in SubAgent page | Plugin detail → runtime |
+| Extensions → SubAgents | Plugin detail → Subagent management → Expert templates; execution limits remain in plugin settings |
+| Built-in SubAgent page | Plugin detail → Subagent management (view ID: `runtime`) |
 | Legacy `transfer_to_*` experts | Available through the plugin compatibility SDK; core main no longer mounts them |
 | Core `subagent_orchestrator` settings | Only `agents` data is retained for legacy plugins; asynchronous workers use plugin settings |
 | `/api/v1/subagents/*` and `/api/subagent/*` | Removed; new runtime views use authenticated plugin APIs |
@@ -20,4 +20,4 @@ Native expert mounting, `main_enable`, tool deduplication, and `router_system_pr
 
 The legacy `@agent` / `register_agent`, `RegisteringAgent`, and `HandoffTool` SDK interfaces remain available for existing plugins, including nested tool binding and foreground/background handoff execution. `Context.subagent_orchestrator`, its constructor argument, configuration loading, and `reload_from_config()` are also retained. These legacy interfaces are deprecated in favor of the plugin's worker tools; retaining them keeps existing expert discovery and delegation working while plugins migrate.
 
-The runtime view remains read-only and uses AstrBot's standard plugin API authentication and permissions. Users communicate with workers through main. Chinese and English usage guides include the updated entry mapping and screenshots using sample records.
+The plugin view follows AstrBot Dashboard styling, including light/dark themes and responsive layouts. Its expert tab supports creating, editing, enabling, disabling, and deleting templates with provider/persona selectors, prompt preview, and tool selection. Saves persist through the plugin configuration and refresh the spawn tool without restarting workers. Worker progress remains read-only and uses AstrBot's standard plugin API authentication and permissions. Users communicate with workers through main. Chinese and English usage guides include the updated entry mapping and screenshots using sample records.

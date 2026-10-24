@@ -8,6 +8,12 @@ Upload the plugin ZIP through **Extensions → Plugins**, then open **Subagent �
 
 Templates support a name, public description, persona, system prompt, provider, and tools. A selected persona supplies its prompt, preset dialogue, and tools. An empty tool list means no tools. Main retains its own tools; expert configuration no longer removes tools from main.
 
+Open **Subagent management → Expert templates** from the plugin detail page and click **Create expert**. Enter a name and description, then select a provider and persona. Alternatively, write a custom prompt and choose all, specific, or no tools. Saving updates available templates immediately while tasks already started continue running. The list supports editing, enabling, disabling, and deleting experts.
+
+![Expert creation inside the plugin](./images/subagent-plugin-experts-en.png)
+
+The page follows AstrBot Dashboard styling and light/dark themes. The screenshot uses sample settings.
+
 ## Execution and follow-up
 
 `spawn_agent` submits the first task together with creation and returns a worker ID immediately. Workers run concurrently while main continues independent work.
@@ -27,7 +33,7 @@ Defaults: 3 concurrent workers per session, a 600-second timeout including queue
 
 ## Inspect progress
 
-Open **Extensions → Plugins → Subagent → runtime** to inspect states, turns, completed steps, results, and execution records. This view is read-only and uses AstrBot's standard plugin API authentication and permissions.
+Open **Extensions → Plugins → Subagent → Subagent management → Worker progress** to inspect states, turns, completed steps, results, and execution records. This tab is read-only and uses AstrBot's standard plugin API authentication and permissions.
 
 ![Read-only worker progress in the plugin](./images/subagent-plugin-runtime-en.png)
 
@@ -45,8 +51,8 @@ Delivery is at least once: abnormal exits can cause duplicates. Stopping a sessi
 
 | Previous entry | Replacement |
 | --- | --- |
-| Extensions → SubAgents | Extensions → Plugins → Subagent → Settings |
-| Built-in SubAgent page | Plugin detail → runtime |
+| Extensions → SubAgents | Plugin detail → Subagent management → Expert templates; execution limits remain in plugin settings |
+| Built-in SubAgent page | Plugin detail → Subagent management (view ID: `runtime`) |
 | Legacy `transfer_to_*` experts | Available through the plugin compatibility SDK; core main no longer mounts them |
 | Core `subagent_orchestrator` configuration | Only `agents` data is retained for legacy plugins; optionally copy definitions into the new plugin's `agents`, and use `enabled` |
 
