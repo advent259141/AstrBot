@@ -460,11 +460,20 @@ class LocalShellComponent(ShellComponent):
             if timeout is not None:
 
                 async def _enforce_timeout() -> None:
+                    deadline = time.monotonic() + timeout
                     try:
                         await asyncio.wait_for(
                             asyncio.shield(wait_task),
                             timeout=timeout,
                         )
+                        # The Shell may exit before descendants release stdout.
+                        # Keep the original deadline for the entire Windows job.
+                        if windows_job is not None:
+                            while windows_job.active_processes():
+                                remaining = deadline - time.monotonic()
+                                if remaining <= 0:
+                                    raise asyncio.TimeoutError
+                                await asyncio.sleep(min(0.05, remaining))
                     except asyncio.TimeoutError:
                         session.timed_out = True
                         logger.warning(

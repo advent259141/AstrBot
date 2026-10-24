@@ -1337,6 +1337,86 @@ async def test_windows_managed_shell_cleans_children_after_leader_exits(tmp_path
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.name != "nt", reason="Native Windows job ownership.")
+async def test_windows_shell_timeout_cleans_children_after_wait_finishes(
+    monkeypatch, tmp_path
+):
+    """Keep enforcing the deadline after the Shell's wait has completed."""
+    import psutil
+
+    async def wait_for_leader(process):
+        # Reproduce Process.wait() observing an already-exited Shell while a
+        # descendant still owns the output pipe.
+        for _ in range(500):
+            if process.returncode is not None:
+                return process.returncode
+            await asyncio.sleep(0.01)
+        raise TimeoutError("Shell leader did not exit")
+
+    monkeypatch.setattr(asyncio.subprocess.Process, "wait", wait_for_leader)
+    marker = tmp_path / "timeout-child.pid"
+    child = tmp_path / "timeout_child.py"
+    child.write_text(
+        "import os, pathlib, time\n"
+        f"marker = pathlib.Path({str(marker)!r})\n"
+        "pending = marker.with_suffix('.tmp')\n"
+        "pending.write_text(str(os.getpid()))\n"
+        "pending.replace(marker)\n"
+        "time.sleep(30)\n",
+        encoding="utf-8",
+    )
+    launcher = tmp_path / "timeout_launcher.py"
+    launcher.write_text(
+        f"import subprocess, sys\nsubprocess.Popen([sys.executable, {str(child)!r}])\n",
+        encoding="utf-8",
+    )
+    command = "& " + " ".join(
+        "'" + item.replace("'", "''") + "'" for item in (sys.executable, str(launcher))
+    )
+    shell = LocalShellComponent()
+    try:
+        result = await asyncio.wait_for(
+            shell.exec_managed(
+                command,
+                owner_id="timeout-test",
+                creator_id="creator",
+                creator_is_admin=True,
+                sandboxed=False,
+                permission_check=lambda: True,
+                timeout=3,
+                yield_time_ms=0,
+            ),
+            6,
+        )
+        session = shell._sessions[result["session_id"]]
+        for _ in range(200):
+            if marker.exists() and session.wait_task.done():
+                break
+            await asyncio.sleep(0.01)
+        child_process = psutil.Process(int(marker.read_text()))
+        assert session.wait_task.done()
+        assert child_process.is_running()
+        assert not session.reader_task.done()
+        result = await asyncio.wait_for(
+            shell.poll_session(
+                owner_id="timeout-test",
+                requester_id="creator",
+                requester_is_admin=True,
+                session_id=session.session_id,
+            ),
+            5,
+        )
+        assert session.timed_out
+        assert result["status"] == "timed_out"
+        assert result["session_closed"]
+        await asyncio.to_thread(child_process.wait, 5)
+        assert session.reader_task.done() and session.output_file.closed
+        assert not shell._sessions
+    finally:
+        await asyncio.wait_for(shell.shutdown_sessions(), 8)
+
+
+@pytest.mark.asyncio
 async def test_managed_shell_returns_completed_output_without_open_session():
     shell = LocalShellComponent()
 
